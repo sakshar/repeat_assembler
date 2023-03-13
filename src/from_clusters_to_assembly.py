@@ -2,7 +2,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 import csv
-
+import sys
 
 def get_assembly_map(assembly):
     assembly_map = dict()
@@ -11,7 +11,24 @@ def get_assembly_map(assembly):
     return assembly_map
 
 
+def get_final_assembly_without_paths(contig_map, path_to_output):
+    max_output_file = ""
+    max_assembly_seq = ""
+    for id in contig_map.keys():
+        if len(contig_map[id]) > len(max_assembly_seq):
+            max_output_file = id
+            max_assembly_seq = contig_map[id]
+    print(max_output_file + "_final", ":", len(max_assembly_seq))
+    seqs = []
+    record = SeqRecord(Seq(max_assembly_seq), id=max_output_file + "_final",
+                       description="size_" + str(len(max_assembly_seq)))
+    seqs.append(record)
+    SeqIO.write(seqs, path_to_output + max_output_file + "_final.fasta", "fasta")
+
+
 def get_final_assembly(paths, edges, contig_map, path_to_output):
+    max_output_file = ""
+    max_assembly_seq = ""
     for path in paths:
         output_file = "".join(path)
         assembly_seq = ""
@@ -24,10 +41,19 @@ def get_final_assembly(paths, edges, contig_map, path_to_output):
             else:
                 assembly_seq = str(assembly_seq[:-(edges[(u, v)][0][1] - edges[(u, v)][0][0])]) + str(contig_map[v])
         print(output_file, ":", len(assembly_seq))
+        if len(assembly_seq) > len(max_assembly_seq):
+            max_output_file = output_file
+            max_assembly_seq = assembly_seq
         seqs = []
-        record = SeqRecord(Seq(assembly_seq), id=output_file, description="path_"+output_file)
+        record = SeqRecord(Seq(assembly_seq), id=output_file, description="size_"+str(len(assembly_seq)))
         seqs.append(record)
         SeqIO.write(seqs, path_to_output + output_file + ".fasta", "fasta")
+    print(max_output_file+"_final", ":", len(max_assembly_seq))
+    seqs = []
+    record = SeqRecord(Seq(max_assembly_seq), id=max_output_file+"_final", description="size_" + str(len(max_assembly_seq)))
+    seqs.append(record)
+    SeqIO.write(seqs, path_to_output + max_output_file + "_final.fasta", "fasta")
+
 
 
 def paf_reader(infile, slack):
@@ -59,15 +85,27 @@ def get_overlap_graph(overlap_data, repeat_length, tolerance):
     for row in overlap_data:
         length1, start1, end1, length2, start2, end2 = row[1], row[2], row[3], row[5], row[6], row[7]
         delta1, delta2 = end1 - start1, end2 - start2
-        if delta1 < repeat_length and delta2 < repeat_length:
-            if 0 <= start1 <= tolerance and length2 - tolerance <= end2 <= length2:
+        #if delta1 < repeat_length and delta2 < repeat_length:
+        if 0 <= start1 <= tolerance and length2 - tolerance <= end2 <= length2:
+            if (row[4], row[0]) not in edges:
                 edges[(row[4], row[0])] = ((start2, end2), (start1, end1))
                 nodes[row[0]] = length1
                 nodes[row[4]] = length2
-            elif 0 <= start2 <= tolerance and length1 - tolerance <= end1 <= length1:
+            else:
+                u, v = edges[(row[4], row[0])][0], edges[(row[4], row[0])][1]
+                prev_delta1, prev_delta2 = v[1] - v[0], u[1] - u[0]
+                if delta1 < prev_delta1 and delta2 < prev_delta2:
+                    edges[(row[4], row[0])] = ((start2, end2), (start1, end1))
+        elif 0 <= start2 <= tolerance and length1 - tolerance <= end1 <= length1:
+            if (row[0], row[4]) not in edges:
                 edges[(row[0], row[4])] = ((start1, end1), (start2, end2))
                 nodes[row[0]] = length1
                 nodes[row[4]] = length2
+            else:
+                u, v = edges[(row[0], row[4])][0], edges[(row[0], row[4])][1]
+                prev_delta1, prev_delta2 = u[1] - u[0], v[1] - v[0]
+                if delta1 < prev_delta1 and delta2 < prev_delta2:
+                    edges[(row[0], row[4])] = ((start1, end1), (start2, end2))
     return edges, nodes
 
 
@@ -150,50 +188,46 @@ def enumerate_paths(graph):
     return all_paths
 
 
-paf = "simulated/k21/output/sim5_depth50_max20000_hifi/naive2/overlaps.paf"
-path_to_output = "simulated/k21/output/sim5_depth50_max20000_hifi/naive2/final_assembly/"
-naive = SeqIO.parse('simulated/k21/output/sim5_depth50_max20000_hifi/naive2/naive2.asm.fasta', 'fasta')
-cc = SeqIO.parse('simulated/k21/output/sim5_depth50_max20000_hifi/cc/cc.asm.fasta', 'fasta')
-kmeans = SeqIO.parse('simulated/k21/output/sim5_depth50_max20000_hifi/kmeans/kmeans.asm.fasta', 'fasta')
+k = 21
 slack = 100
-overlap_data = paf_reader(paf, slack)
-#naive_map, cc_map, kmeans_map = get_assembly_maps(naive, cc, kmeans)
-#get_final_assembly(overlap_data, naive_map, path_to_output)
-#print(len(overlap_data))
-#for row in overlap_data:
-#    print(row)
-repeat_length = 20000
 tolerance = 1000
-edges, nodes = get_overlap_graph(overlap_data, repeat_length, tolerance)
-print("----- contigs with length -----")
-print(nodes)
-print("----- overlaps with suffix and prefix windows -----")
-for edge in edges.keys():
-    print(edge, ":", edges[edge])
-graph_all_nodes = get_adjacency_list_with_all_nodes(edges, nodes)
-graph = get_adjacency_list(edges)
-print("----- overlap graph as adjacency list -----")
-print(graph)
-print("----- check for DAG -----")
-if isCyclic(graph_all_nodes, nodes):
-    print("The overlap graph contains cycle :'(")
+methods = ["naive", "cc"]
+repeat_size, copy, snp, depth = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
+ref_size = 100000 + (copy * repeat_size)
+parent_dir = str(repeat_size) + "_" + str(copy) + "_" + str(snp)
+paf_file = "../output/"+parent_dir+"/"+str(depth)+"/"+methods[0]+"/overlaps.paf"
+path_to_output = "../output/"+parent_dir+"/"+str(depth)+"/"+methods[0]+"/final_assembly/"
+contigs_file = SeqIO.parse("../output/"+parent_dir+"/"+str(depth)+"/"+methods[0]+"/asm.fasta", 'fasta')
+assembly_map = get_assembly_map(contigs_file)
+overlap_data = paf_reader(paf_file, slack)
+edges, nodes = get_overlap_graph(overlap_data, repeat_size, tolerance)
+if len(list(nodes.keys())) == 0:
+    print("----- the best possible assembly with length -----")
+    get_final_assembly_without_paths(assembly_map, path_to_output)
 else:
-    print("The overlap graph is a DAG :)")
-    paths = enumerate_paths(graph)
-    print("----- all possible paths in the overlap graph -----")
-    for path in paths:
-        print(path)
-    assembly_map = get_assembly_map(naive)
-    print("----- all possible assemblies with length -----")
-    get_final_assembly(paths, edges, assembly_map, path_to_output)
-"""
-    naive_map, cc_map, kmeans_map = get_assembly_maps(naive, cc, kmeans)
-    print("----- all possible assemblies with length -----")
-    get_final_assembly(paths, edges, naive_map, path_to_output)
-print("------- naive assembly -------")
-print(naive_map)
-print("------- cc assembly -------")
-print(cc_map)
-print("------- kmeans assembly -------")
-print(kmeans_map)
-"""
+    print("----- contigs with length -----")
+    print(nodes)
+    print("----- overlaps with suffix and prefix windows -----")
+    for edge in edges.keys():
+        print(edge, ":", edges[edge])
+    graph_all_nodes = get_adjacency_list_with_all_nodes(edges, nodes)
+    graph = get_adjacency_list(edges)
+    print("----- overlap graph as adjacency list -----")
+    print(graph)
+    print("----- check for DAG -----")
+    if isCyclic(graph_all_nodes, nodes):
+        print("The overlap graph contains cycle :'(")
+        print("----- the best possible assembly with length -----")
+        get_final_assembly_without_paths(assembly_map, path_to_output)
+    else:
+        print("The overlap graph is a DAG :)")
+        paths = enumerate_paths(graph)
+        print("----- all possible paths in the overlap graph -----")
+        for path in paths:
+            print(path)
+        if len(paths) == 0:
+            print("----- the best possible assembly with length -----")
+            get_final_assembly_without_paths(assembly_map, path_to_output)
+        else:
+            print("----- all possible assemblies and the best one with length -----")
+            get_final_assembly(paths, edges, assembly_map, path_to_output)

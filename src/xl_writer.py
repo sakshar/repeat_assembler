@@ -24,19 +24,56 @@ def kmer_histo_generator(filename):
     return kmer_histo, kmer_map
 
 
-path = './simulated/k21/hifi.sim5_depth50_max20000.'
-workbook = xlsxwriter.Workbook(path+'xlsx')
-worksheet = workbook.add_worksheet()
+def write_histo_to_xcel(input):
+    workbook = xlsxwriter.Workbook(input + '.xlsx')
+    worksheet = workbook.add_worksheet()
 
-histo = open(path+'histo', 'r')
-i = 1
-for line in histo:
-    args = line.strip().split()
-    worksheet.write("A"+str(i), args[0])
-    worksheet.write("B"+str(i), args[1])
-    i += 1
-workbook.close()
+    histo = open(input + '.histo', 'r')
+    i = 1
+    for line in histo:
+        args = line.strip().split()
+        worksheet.write("A" + str(i), args[0])
+        worksheet.write("B" + str(i), args[1])
+        i += 1
+    workbook.close()
 
+
+def write_read_stat_to_xcel(input):
+    workbook = xlsxwriter.Workbook(input + '.xlsx')
+    worksheet = workbook.add_worksheet()
+    file = open(input + ".txt", "r")
+    for i in range(1, 126):
+        num = file.readline().strip().split(":")[1]
+        depth = file.readline().strip().split(":")[1]
+        mean_sd = file.readline().strip().split(":")[1]
+        min_val = file.readline().strip().split(":")[1]
+        max_val = file.readline().strip().split(":")[1]
+        worksheet.write("A" + str(i), num)
+        worksheet.write("B" + str(i), mean_sd)
+        worksheet.write("C" + str(i), max_val)
+        worksheet.write("D" + str(i), min_val)
+        i += 1
+    workbook.close()
+
+
+repeat_sizes = [5000, 10000, 15000, 20000, 25000]
+no_of_copies = [2, 5, 10, 20, 50]
+snp_rates = [100, 250, 500, 1000, 2000]
+depths = [10, 20, 30, 40, 50]
+sizes = ["10k", "15k", "20k", "25k"]
+path = '../read_stats/read_stat_'
+#for size in sizes:
+#    input_file = path + size
+#    write_read_stat_to_xcel(input_file)
+"""
+for repeat_size in repeat_sizes:
+    for copy in no_of_copies:
+        for snp in snp_rates:
+            for depth in depths:
+                input = path + str(repeat_size) + "_" + str(copy) + "_" + str(snp) + "/" + str(depth)
+                write_histo_to_xcel(input)
+"""
+write_histo_to_xcel("../arabidopsis/ERR6210723")
 """
 histo_, map_ = kmer_histo_generator('./yeast_complex/k21/hifiasm.histo')
 workbook = xlsxwriter.Workbook('./yeast_complex/k21/hifiasm.xlsx')

@@ -82,10 +82,10 @@ def validate_clusters(cluster_file, alignment_file, path_to_output):
 
 
 clustering_methods = ["naive", "kmeans", "cc"]
-cluster_file = open("simulated/k21/output/sim5_depth50_max20000_hifi_clusters_" + clustering_methods[0] + "2.txt", "r")
+cluster_file = open("simulated/k21/output/sim5_depth50_max20000_hifi_clusters_" + clustering_methods[0] + ".txt", "r")
 read_file = SeqIO.parse("simulated/HiFi/hifi.sim5_depth50_max20000.fasta", "fasta")
 alignment_file = "simulated/HiFi/hifi.sim5_depth50_max20000_alignment.csv"
-path_to_output = "simulated/k21/output/sim5_depth50_max20000_hifi/" + clustering_methods[0] + "2/"
+path_to_output = "simulated/k21/output/sim5_depth50_max20000_hifi/" + clustering_methods[0]
 #write_read_clusters_to_fasta(cluster_file, read_file, path_to_output)
 ranges = validate_clusters(cluster_file, alignment_file, path_to_output)
 for i in range(len(ranges.keys())):

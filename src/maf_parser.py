@@ -69,7 +69,7 @@ def get_pairwise_location_data(maf_data, pw_profiles, start, end, threshold):
 
 
 def pairwise_location_data_writer(infile, overlap_locations):
-    with open(infile+"_overlap2.csv", "w") as csvfile:
+    with open(infile+"_overlap.csv", "w") as csvfile:
         writer = csv.writer(csvfile, delimiter="\t")
         [writer.writerow(r) for r in overlap_locations]
 
