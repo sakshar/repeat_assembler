@@ -156,7 +156,7 @@ def get_overlap_graph(overlap_data, tolerance):
                     prev_exact_match, prev_matched_block = edges[(row[0], row[4])][3], edges[(row[0], row[4])][4]
                     prev_percent_identity = 1.0 * prev_exact_match / prev_matched_block
                     if percent_identity > prev_percent_identity or (percent_identity == prev_percent_identity and matched_block < prev_matched_block):
-                        edges[(row[0], row[4])] = ((start2, end2), (start1, end1), strand, exact_match, matched_block)
+                        edges[(row[0], row[4])] = ((start1, end1), (start2, end2), strand, exact_match, matched_block)
         elif strand == "-":
             if (0 <= start1 <= tolerance and 0 <= start2 <= tolerance) or (length2 - tolerance <= end2 <= length2 and length1 - tolerance <= end1 <= length1):
                 if (row[0], row[4]) not in edges:
@@ -182,16 +182,26 @@ def get_overlap_graph(overlap_data, tolerance):
         else:
             self_loop_removed_edges[edge] = edges[edge]
     #return edges, nodes
-    return self_loop_removed_edges, nodes
+    adjusted_edges = get_strand_adjusted_edges(self_loop_removed_edges, nodes)
+    #return self_loop_removed_edges, nodes
+    return adjusted_edges, nodes
 
 
-def get_strand_adjusted_edges(edges):
+def get_strand_adjusted_edges(edges, nodes):
     adjusted_edges = dict()
     for edge in edges:
         if edges[edge][2] == "+":
             adjusted_edges[edge] = edges[edge]
         elif edges[edge][2] == "-":
             # code here for adjusting orientation
+            start1, end1, start2, end2 = edges[edge][0][0], edges[edge][0][1], edges[edge][1][0], edges[edge][1][1]
+            length1, length2 = nodes[edge[0]], nodes[edge[1]]
+            new_start1, new_end1 = length1 - end1, length1 - start1
+            dist_to_end1, dist_to_end2 = length1 - new_end1, length2 - end2
+            if dist_to_end1 < dist_to_end2 and start2 < start1:
+                adjusted_edges[edge] = ((new_start1, new_end1), (start2, end2), edges[edge][2], edges[edge][3], edges[edge][4])
+            else:
+                adjusted_edges[(edge[1], edge[0])] = ((start2, end2), (new_start1, new_end1), "*", edges[edge][3], edges[edge][4])
     return adjusted_edges
 
 
@@ -265,7 +275,7 @@ def cycle_info_writer():
                             rows.append([repeat_size, copy, snp, depth, "DAG", nodes, edges, cycle])
                         else:
                             rows.append([repeat_size, copy, snp, depth, "Cycle", nodes, edges, cycle])
-    cycle_info_file = "../output/cycle_info_reproduced.csv"
+    cycle_info_file = "../output/cycle_info_reproduced_withAdjustedEdges.csv"
     with open(cycle_info_file, "w") as csvfile:
         writer = csv.writer(csvfile, delimiter="\t")
         [writer.writerow(r) for r in rows]
