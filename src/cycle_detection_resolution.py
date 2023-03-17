@@ -94,10 +94,12 @@ def get_final_assembly_for_DAGs(contig_map, path_to_output, ref_size, edges, nod
         current_contig_id = path[0]
         used_nodes = [path[0]]
         current_dist = ref_size
+        current_orientations = ""
         last_edge = ""
         flag = False
         for i in range(1, len(path)):
             u, v = path[i-1], path[i]
+            current_orientations += edges[(u, v)][2]
             # when merging the first edge on a path
             if not flag:
                 if edges[(u, v)][2] == "+":
@@ -124,12 +126,17 @@ def get_final_assembly_for_DAGs(contig_map, path_to_output, ref_size, edges, nod
                         current_contig = str(contig_map[v][0][edges[(u, v)][1][1]:])
                         current_contig_id = v
                     last_edge = "+"
-                # handling "+-", "--", "*-": break the current one and start a new contig
                 elif edges[(u, v)][2] == "-":
-                    current_contigs[current_contig_id] = current_contig
-                    current_dist -= len(current_contig)
-                    current_contig = str(contig_map[v][0][edges[(u, v)][1][1]:])
-                    current_contig_id = v
+                    # handling "+-", "--": break the current one and start a new contig
+                    if last_edge in ["+", "-"]:
+                        current_contigs[current_contig_id] = current_contig
+                        current_dist -= len(current_contig)
+                        current_contig = str(contig_map[v][0][edges[(u, v)][1][1]:])
+                        current_contig_id = v
+                    # handling "*-": continue with the current contig
+                    elif last_edge == "*":
+                        current_contig += str(contig_map[v][0][edges[(u, v)][1][1]:])
+                        current_contig_id += v
                     last_edge = "-"
                 elif edges[(u, v)][2] == "*":
                     # handling "+*", "-*": continue with the current contig
@@ -151,14 +158,14 @@ def get_final_assembly_for_DAGs(contig_map, path_to_output, ref_size, edges, nod
         for node in remaining_nodes:
             current_contigs[node] = contig_map[node][0]
             current_dist -= nodes[node]
-        candidate_assemblies.append((current_contigs, current_dist))
+        candidate_assemblies.append((current_contigs, current_dist, current_orientations))
     sorted_candidate_assemblies = sorted(candidate_assemblies, key=lambda x:abs(x[1]))
     seqs = []
-    best_assembly, best_dist = sorted_candidate_assemblies[0][0], sorted_candidate_assemblies[0][1]
-    print("Best assembly:", list(best_assembly.keys()), best_dist, ref_size)
+    best_assembly, best_dist, best_orientations = sorted_candidate_assemblies[0][0], sorted_candidate_assemblies[0][1], sorted_candidate_assemblies[0][2]
+    print("Best assembly:", list(best_assembly.keys()), best_orientations, best_dist, ref_size)
     print("All assemblies:")
     for assembly in sorted_candidate_assemblies:
-        print(list(assembly[0].keys()), assembly[1])
+        print(list(assembly[0].keys()), assembly[2], assembly[1])
     for id in best_assembly.keys():
         record = SeqRecord(Seq(best_assembly[id]), id=id, description=str(len(best_assembly[id])))
         seqs.append(record)
