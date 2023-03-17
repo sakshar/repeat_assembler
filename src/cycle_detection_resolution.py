@@ -59,6 +59,112 @@ def get_assembly_map(assembly):
         assembly_map[str(record.id)] = (seq, Seq(seq).reverse_complement())
     return assembly_map
 
+
+def get_final_assebmly_without_overlap_graph(contig_map, path_to_output, ref_size):
+    current_assembly = dict()
+    current_dist = ref_size
+    sorted_contigs = dict(sorted(contig_map.items(), key=lambda x:len(x[1][0]), reverse=True))
+    #for id in sorted_contigs:
+    #    print(id, len(sorted_contigs[id][0]))
+    for id in sorted_contigs:
+        current_contig = sorted_contigs[id][0]
+        if abs(current_dist - len(current_contig)) < abs(current_dist):
+            current_assembly[id] = current_contig
+            current_dist -= len(current_contig)
+        #else:
+        #    break
+    seqs = []
+    #print("Best assembly:", list(current_assembly.keys()), current_dist, ref_size)
+    #for id in current_assembly:
+    #    print(id, len(current_assembly[id]))
+    for id in current_assembly:
+        record = SeqRecord(Seq(current_assembly[id]), id=id, description=str(len(current_assembly[id])))
+        seqs.append(record)
+    SeqIO.write(seqs, path_to_output + "rambler.fasta", "fasta")
+
+
+def get_final_assembly_for_DAGs(contig_map, path_to_output, ref_size, edges, nodes):
+    print(list(nodes.keys()))
+    paths = enumerate_paths(get_adjacency_list(edges))
+    candidate_assemblies = list()
+    for path in paths:
+        current_nodes = list(nodes.keys())
+        current_contigs = dict()
+        current_contig = ""
+        current_contig_id = path[0]
+        used_nodes = [path[0]]
+        current_dist = ref_size
+        last_edge = ""
+        flag = False
+        for i in range(1, len(path)):
+            u, v = path[i-1], path[i]
+            # when merging the first edge on a path
+            if not flag:
+                if edges[(u, v)][2] == "+":
+                    current_contig = str(contig_map[u][0]) + str(contig_map[v][0][edges[(u, v)][1][1]:])
+                    last_edge = "+"
+                elif edges[(u, v)][2] == "-":
+                    current_contig = str(contig_map[u][1]) + str(contig_map[v][0][edges[(u, v)][1][1]:])
+                    last_edge = "-"
+                elif edges[(u, v)][2] == "*":
+                    current_contig = str(contig_map[u][0]) + str(contig_map[v][1][edges[(u, v)][1][1]:])
+                    last_edge = "*"
+                current_contig_id += v
+                flag = True
+            else:
+                if edges[(u, v)][2] == "+":
+                    # handling "++", "-+": continue with the current contig
+                    if last_edge in ["+", "-"]:
+                        current_contig += str(contig_map[v][0][edges[(u, v)][1][1]:])
+                        current_contig_id += v
+                    # handling "*+": break the current one and start a new contig
+                    elif last_edge == "*":
+                        current_contigs[current_contig_id] = current_contig
+                        current_dist -= len(current_contig)
+                        current_contig = str(contig_map[v][0][edges[(u, v)][1][1]:])
+                        current_contig_id = v
+                    last_edge = "+"
+                # handling "+-", "--", "*-": break the current one and start a new contig
+                elif edges[(u, v)][2] == "-":
+                    current_contigs[current_contig_id] = current_contig
+                    current_dist -= len(current_contig)
+                    current_contig = str(contig_map[v][0][edges[(u, v)][1][1]:])
+                    current_contig_id = v
+                    last_edge = "-"
+                elif edges[(u, v)][2] == "*":
+                    # handling "+*", "-*": continue with the current contig
+                    if last_edge in ["+", "-"]:
+                        current_contig += str(contig_map[v][1][edges[(u, v)][1][1]:])
+                        current_contig_id += v
+                    # handling "**": break the current one and start a new contig
+                    elif last_edge == "*":
+                        current_contigs[current_contig_id] = current_contig
+                        current_dist -= len(current_contig)
+                        current_contig = str(contig_map[v][1][edges[(u, v)][1][1]:])
+                        current_contig_id = v
+                    last_edge = "*"
+            used_nodes.append(v)
+        if current_contig_id not in current_contigs.keys():
+            current_contigs[current_contig_id] = current_contig
+            current_dist -= len(current_contig)
+        remaining_nodes = [x for x in current_nodes if x not in used_nodes]
+        for node in remaining_nodes:
+            current_contigs[node] = contig_map[node][0]
+            current_dist -= nodes[node]
+        candidate_assemblies.append((current_contigs, current_dist))
+    sorted_candidate_assemblies = sorted(candidate_assemblies, key=lambda x:abs(x[1]))
+    seqs = []
+    best_assembly, best_dist = sorted_candidate_assemblies[0][0], sorted_candidate_assemblies[0][1]
+    print("Best assembly:", list(best_assembly.keys()), best_dist, ref_size)
+    print("All assemblies:")
+    for assembly in sorted_candidate_assemblies:
+        print(list(assembly[0].keys()), assembly[1])
+    for id in best_assembly.keys():
+        record = SeqRecord(Seq(best_assembly[id]), id=id, description=str(len(best_assembly[id])))
+        seqs.append(record)
+    SeqIO.write(seqs, path_to_output + "rambler.fasta", "fasta")
+
+
 """
 def get_final_assembly_without_paths(contig_map, path_to_output):
     max_output_file = ""
@@ -259,26 +365,33 @@ def cycle_info_writer():
                     ref_size = 100000 + (int(copy) * int(repeat_size))
                     parent_dir = repeat_size + "_" + copy + "_" + snp
                     paf_file = "../output/"+parent_dir+"/"+depth+"/"+methods[0]+"/overlaps.paf"
-                    path_to_output = "../output2/"+parent_dir+"/"+depth+"/"+methods[0]+"/final_assembly/"
+                    path_to_output = "../output_reproduced/default/"+parent_dir+"/"+depth+"/"
                     contigs_file = SeqIO.parse("../output/"+parent_dir+"/"+depth+"/"+methods[0]+"/asm.fasta", 'fasta')
                     assembly_map = get_assembly_map(contigs_file)
                     overlap_data = paf_reader(paf_file, slack)
                     edges, nodes = get_overlap_graph(overlap_data, tolerance)
                     if (len(list(nodes.keys()))) == 0:
+                        #print("--------------------")
+                        #print(repeat_size, copy, snp, depth)
                         rows.append([repeat_size, copy, snp, depth, "None", "0", "0", "None"])
+                        get_final_assebmly_without_overlap_graph(assembly_map, path_to_output, ref_size)
+                        #print("--------------------")
                     else:
                         graph_all_nodes = get_adjacency_list_with_all_nodes(edges, nodes)
-                        graph = get_adjacency_list(edges)
                         cycle = find_cycle(graph_all_nodes, nodes)
                         if len(cycle) == 0:
+                            print("--------------------")
+                            print(repeat_size, copy, snp, depth)
                             rows.append([repeat_size, copy, snp, depth, "DAG", nodes, edges, cycle])
+                            get_final_assembly_for_DAGs(assembly_map, path_to_output, ref_size, edges, nodes)
+                            print("--------------------")
                         else:
                             #print(repeat_size, copy, snp, depth, cycle)
                             rows.append([repeat_size, copy, snp, depth, "Cycle", nodes, edges, cycle])
-    cycle_info_file = "../output/cycle_info_reproduced_withAdjustedEdges_v2.csv"
-    with open(cycle_info_file, "w") as csvfile:
-        writer = csv.writer(csvfile, delimiter="\t")
-        [writer.writerow(r) for r in rows]
+    #cycle_info_file = "../output/cycle_info_reproduced_withAdjustedEdges_v2.csv"
+    #with open(cycle_info_file, "w") as csvfile:
+    #    writer = csv.writer(csvfile, delimiter="\t")
+    #    [writer.writerow(r) for r in rows]
 
 cycle_info_writer()
 
