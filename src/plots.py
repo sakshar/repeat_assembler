@@ -1,6 +1,7 @@
 from random import randint
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 import csv
 import xlsxwriter
 import sys
@@ -456,7 +457,8 @@ def get_box_plot_for_genome_fraction_per_contig(quast_data, repeat_sizes, copies
     # show plot
     plt.savefig("../figures/box_plots/box_plot_for_gf_per_contig_10K-20K_5-10_500-2000_20-30.png")
 
-def get_sub_plots_for_ng50_vs_misassemblies(quast_data, repeat_sizes, copies, snps, depths):
+
+def get_sub_plots_for_ng50_vs_misassemblies(quast_data, repeat_sizes, copies, snps, depths, xlim, ylim):
     copy_no, snp_no = len(copies), len(snps)
     ng50s, misassemblies = np.zeros((copy_no, snp_no, 4)), np.zeros((copy_no, snp_no, 4))
     # for i in range(experiment_no):
@@ -475,6 +477,11 @@ def get_sub_plots_for_ng50_vs_misassemblies(quast_data, repeat_sizes, copies, sn
             i += 1
     shapes = ['^', 'o', 's', 'd']
     face_colors = ['red', 'blue', 'green', 'violet']
+    labels = ['RAmbler', 'Hifiasm', 'HiCANU', 'Verkko']
+    handles = []
+    for i in range(4):
+        handles.append(mlines.Line2D([], [], markeredgecolor=face_colors[i], marker=shapes[i], markerfacecolor='None',
+                                     linestyle='None', label=labels[i]))
     fig, axs = plt.subplots(copy_no, snp_no)
     fig.suptitle("misassemblies vs. NG50 for repeats of " + repeat_sizes[0] + " Kbp with read coverage " + depths[0] + "x")
     #fig.tight_layout()
@@ -484,25 +491,141 @@ def get_sub_plots_for_ng50_vs_misassemblies(quast_data, repeat_sizes, copies, sn
     plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
     plt.xlabel('NG50 (Kbp)')
     plt.ylabel('number of misassemblies')
-    plt.rcParams["figure.autolayout"] = True
+    plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=4)
+    #plt.rcParams["figure.autolayout"] = True
+    plt.tight_layout()
     for i in range(copy_no):
         for j in range(snp_no):
             for k in range(4):
                 axs[i, j].plot(ng50s[i][j][k], misassemblies[i][j][k], marker=shapes[k], markeredgecolor=face_colors[k], markerfacecolor='none')
             axs[i, j].set_title(copies[i]+', '+snps[j]+' bp', fontsize=8)
-            axs[i, j].set_xlim(left=0, right=200)
-            axs[i, j].set_ylim(bottom=-1, top=3)
+            axs[i, j].set_xlim(left=0, right=xlim)
+            axs[i, j].set_ylim(bottom=ylim[0], top=ylim[1])
 
     # Hide x labels and tick labels for top plots and y ticks for right plots.
     for ax in axs.flat:
         ax.label_outer()
-    plt.savefig("../figures/sub_plots/misassemblies.vs.ng50_10K_5-10_100-2000_40.png")
+    plt.savefig("../figures/sub_plots/misassemblies.vs.ng50_" + repeat_sizes[0] + "K_5-10_100-2000_" + depths[0] + ".png")
 
 
-repeat_sizes = ["10"] #, "15", "20"] #["5", "10", "15", "20"]
+def get_sub_plots_for_ng50_vs_gf_per_contig(quast_data, repeat_sizes, copies, snps, depths, xlim, ylim):
+    copy_no, snp_no = len(copies), len(snps)
+    ng50s, gf_per_contig = np.zeros((copy_no, snp_no, 4)), np.zeros((copy_no, snp_no, 4))
+    # for i in range(experiment_no):
+    for repeat_size in repeat_sizes:
+        repeat_size += "000"
+        i = 0
+        for copy in copies:
+            j = 0
+            for snp in snps:
+                for depth in depths:
+                    id = repeat_size + "_" + copy + "_" + snp + "_" + depth
+                    for k in range(4):
+                        ng50 = quast_data[id][metrics[1]][k] / 1000
+                        gf, contigs_no = quast_data[id][metrics[2]][k], quast_data[id][metrics[0]][k]
+                        if contigs_no != 0:
+                            gf_per_contig[i][j][k] = gf / contigs_no
+                        ng50s[i][j][k] = ng50
+                j += 1
+            i += 1
+
+    shapes = ['^', 'o', 's', 'd']
+    face_colors = ['red', 'blue', 'green', 'violet']
+    labels = ['RAmbler', 'Hifiasm', 'HiCANU', 'Verkko']
+    handles = []
+    for i in range(4):
+        handles.append(mlines.Line2D([], [], markeredgecolor=face_colors[i], marker=shapes[i], markerfacecolor='None',
+                                     linestyle='None', label=labels[i]))
+    fig, axs = plt.subplots(copy_no, snp_no)
+    fig.suptitle("gf/contig vs. NG50 for repeats of " + repeat_sizes[0] + " Kbp with read coverage " + depths[0] + "x")
+    # add a big axis, hide frame
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel('NG50 (Kbp)')
+    plt.ylabel('Genome fraction per contig')
+    plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=4)
+    plt.tight_layout()
+    #plt.rcParams["figure.autolayout"] = True
+    for i in range(copy_no):
+        for j in range(snp_no):
+            for k in range(4):
+                axs[i, j].plot(ng50s[i][j][k], gf_per_contig[i][j][k], marker=shapes[k], markeredgecolor=face_colors[k], markerfacecolor='none')
+            axs[i, j].set_title(copies[i]+', '+snps[j]+' bp', fontsize=8)
+            axs[i, j].set_xlim(left=0, right=xlim)
+            axs[i, j].set_ylim(bottom=ylim[0], top=ylim[1])
+
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    for ax in axs.flat:
+        ax.label_outer()
+    plt.savefig("../figures/sub_plots/gf_per_contig.vs.ng50_" + repeat_sizes[0] + "K_5-10_100-2000_" + depths[0] + ".png")
+
+
+def get_sub_plots_for_ng50_vs_contig_no(quast_data, repeat_sizes, copies, snps, depths, xlim, ylim):
+    copy_no, snp_no = len(copies), len(snps)
+    ng50s, contig_nos = np.zeros((copy_no, snp_no, 4)), np.zeros((copy_no, snp_no, 4))
+    # for i in range(experiment_no):
+    for repeat_size in repeat_sizes:
+        repeat_size += "000"
+        i = 0
+        for copy in copies:
+            j = 0
+            for snp in snps:
+                for depth in depths:
+                    id = repeat_size + "_" + copy + "_" + snp + "_" + depth
+                    for k in range(4):
+                        ng50 = quast_data[id][metrics[1]][k] / 1000
+                        contigs_no = quast_data[id][metrics[0]][k]
+                        ng50s[i][j][k], contig_nos[i][j][k] = ng50, contigs_no
+                j += 1
+            i += 1
+
+    shapes = ['^', 'o', 's', 'd']
+    face_colors = ['red', 'blue', 'green', 'violet']
+    labels = ['RAmbler', 'Hifiasm', 'HiCANU', 'Verkko']
+    handles = []
+    for i in range(4):
+        handles.append(mlines.Line2D([], [], markeredgecolor=face_colors[i], marker=shapes[i], markerfacecolor='None', linestyle='None', label=labels[i]))
+    fig, axs = plt.subplots(copy_no, snp_no)
+    fig.suptitle("Contig no. vs. NG50 for repeats of " + repeat_sizes[0] + " Kbp with read coverage " + depths[0] + "x")
+    #fig.tight_layout()
+    # add a big axis, hide frame
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel('NG50 (Kbp)')
+    plt.ylabel('number of contigs')
+    plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=4)
+    #plt.rcParams["figure.autolayout"] = True
+    plt.tight_layout()
+    for i in range(copy_no):
+        for j in range(snp_no):
+            for k in range(4):
+                axs[i, j].plot(ng50s[i][j][k], contig_nos[i][j][k], marker=shapes[k], markeredgecolor=face_colors[k], markerfacecolor='none')
+            axs[i, j].set_title(copies[i]+', '+snps[j]+' bp', fontsize=8)
+            axs[i, j].set_xlim(left=0, right=xlim)
+            axs[i, j].set_ylim(bottom=ylim[0], top=ylim[1])
+
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    for ax in axs.flat:
+        ax.label_outer()
+    plt.savefig("../figures/sub_plots/contig.vs.ng50_" + repeat_sizes[0] + "K_5-10_100-2000_" + depths[0] + ".png")
+
+
+def subplotter(quast_data, repeat_sizes, copies, snps, depths):
+    x_lim = [200, 250, 300]
+    y_lim = (-10, 110)
+    for r in range(1, len(repeat_sizes)+1):
+        repeat = repeat_sizes[r-1:r]
+        for d in range(1, len(depths)+1):
+            dep = depths[d-1:d]
+            get_sub_plots_for_ng50_vs_gf_per_contig(quast_data, repeat, copies, snps, dep, x_lim[r-1], y_lim)
+
+
+repeat_sizes = ["10", "15", "20"] #, "15", "20"] #["5", "10", "15", "20"]
 copies = ["5", "10"] #["2", "5", "10"]
 snps = ["100", "250", "500", "1000", "2000"] #["100", "250", "500", "1000", "2000"]
-depths = ["40"] #["20", "30", "40"]
+depths = ["20", "30", "40"] #["20", "30", "40"]
 #experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
 #metrics = ['# contigs'] #'NG50'] #'# contigs'] #, 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp']
 quast_data = get_quast_reports(repeat_sizes, copies, snps, depths)
@@ -527,4 +650,6 @@ metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp
 #plot_RAmbler_snp_fixed(modified_quast_data, repeat_sizes, copies, sys.argv[1], depths, metrics[3])
 #get_box_plot_for_genome_fraction_per_contig(modified_quast_data, repeat_sizes, copies, snps, depths)
 #get_box_plot_for_ng50_wrt_ref_size(modified_quast_data, repeat_sizes, copies, snps, depths)
-get_sub_plots_for_ng50_vs_misassemblies(modified_quast_data, repeat_sizes, copies, snps, depths)
+#get_sub_plots_for_ng50_vs_misassemblies(modified_quast_data, repeat_sizes, copies, snps, depths)
+#get_sub_plots_for_ng50_vs_gf_per_contig(modified_quast_data, repeat_sizes, copies, snps, depths)
+subplotter(modified_quast_data, repeat_sizes, copies, snps, depths)
