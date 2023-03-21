@@ -69,7 +69,7 @@ def quast_parser(infile):
         missing, insert_at = True, 3
     elif "verkko" not in data[0][1:]:
         missing, insert_at = True, 4
-    metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp']
+    metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp', '# misassemblies']
     for row in data:
         if row[0] in metrics:
             if not missing:
@@ -84,7 +84,7 @@ def quast_parser(infile):
 
 def get_quast_reports(repeat_sizes, copies, snps, depths):
     quast_data = dict()
-    path = "/Users/sakshar5068/Desktop/repeat_assembler/quast2/"
+    path = "/Users/sakshar5068/Desktop/repeat_assembler/quast_reproduced/default/"
     for repeat_size in repeat_sizes:
         repeat_size += "000"
         for copy in copies:
@@ -372,7 +372,7 @@ def preprocess_quast_data(quast_data):
                     vals[i] = '0'
             #if len(vals) == 3:
             #    vals.append('0')
-            if m in ['# contigs', 'NG50']:
+            if m in ['# contigs', 'NG50', '# misassemblies']:
                 new_vals = [int(j) for j in vals]
             else:
                 new_vals = [float(j) for j in vals]
@@ -380,10 +380,88 @@ def preprocess_quast_data(quast_data):
     return modified_quast_data
 
 
-repeat_sizes = ["5", "10", "15", "20"]
-copies = ["2", "5", "10"]
-snps = ["100", "250", "500", "1000", "2000"]
-depths = ["20", "30", "40"]
+def get_box_plot_for_ng50_wrt_ref_size(quast_data, repeat_sizes, copies, snps, depths):
+    experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
+    ng50_wrt_ref_size = [np.zeros(experiment_no), np.zeros(experiment_no), np.zeros(experiment_no),
+                                  np.zeros(experiment_no)]
+    i = 0
+    # for i in range(experiment_no):
+    for repeat_size in repeat_sizes:
+        repeat_size += "000"
+        for copy in copies:
+            ref_size = 100000 + int(repeat_size) * int(copy)
+            for snp in snps:
+                for depth in depths:
+                    id = repeat_size + "_" + copy + "_" + snp + "_" + depth
+                    for j in range(4):
+                        #gf, contigs_no = quast_data[id][metrics[2]][j], quast_data[id][metrics[0]][j]
+                        #if contigs_no != 0:
+                        ng50_wrt_ref_size[j][i] = quast_data[id][metrics[1]][j] / ref_size
+                    i += 1
+    print(i, experiment_no)
+    fig = plt.figure(figsize=(10, 7))
+    ax = fig.add_subplot(111)
+
+    # Creating axes instance
+    bp = ax.boxplot(ng50_wrt_ref_size)
+
+    # x-axis labels
+    ax.set_xticklabels(['RAmbler', 'Hifiasm', 'HiCANU', 'Verkko'])
+
+    # Adding title
+    plt.title("box plot of NG50 w.r.t. reference genome size for different assemblers")
+
+    # Removing top axes and right axes
+    # ticks
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_left()
+
+    # show plot
+    plt.savefig("../figures/box_plots/ng50_wrt_ref_size/10K-20K_2-10_100-2000_30.png")
+
+def get_box_plot_for_genome_fraction_per_contig(quast_data, repeat_sizes, copies, snps, depths):
+    experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
+    genome_fraction_per_contig = [np.zeros(experiment_no), np.zeros(experiment_no), np.zeros(experiment_no), np.zeros(experiment_no)]
+    i = 0
+    #for i in range(experiment_no):
+    for repeat_size in repeat_sizes:
+        repeat_size += "000"
+        for copy in copies:
+            for snp in snps:
+                for depth in depths:
+                    id = repeat_size + "_" + copy + "_" + snp + "_" + depth
+                    for j in range(4):
+                        gf, contigs_no = quast_data[id][metrics[2]][j], quast_data[id][metrics[0]][j]
+                        if contigs_no != 0:
+                            genome_fraction_per_contig[j][i] = gf / contigs_no
+                    i += 1
+    print(i, experiment_no)
+    fig = plt.figure(figsize=(10, 7))
+    ax = fig.add_subplot(111)
+
+    # Creating axes instance
+    bp = ax.boxplot(genome_fraction_per_contig)
+
+    # x-axis labels
+    ax.set_xticklabels(['RAmbler', 'Hifiasm', 'HiCANU', 'Verkko'])
+
+    # Adding title
+    plt.title("box plot of genome fraction per contig for different assemblers")
+
+    # Removing top axes and right axes
+    # ticks
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_left()
+
+    # show plot
+    plt.savefig("../figures/box_plots/box_plot_for_gf_per_contig_10K-20K_5-10_500-2000_20-30.png")
+
+
+repeat_sizes = ["10", "15", "20"] #["5", "10", "15", "20"]
+copies = ["2", "5", "10"] #["2", "5", "10"]
+snps = ["100", "250", "500", "1000", "2000"] #["100", "250", "500", "1000", "2000"]
+depths = ["30"] #["20", "30", "40"]
+#experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
 #metrics = ['# contigs'] #'NG50'] #'# contigs'] #, 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp']
 quast_data = get_quast_reports(repeat_sizes, copies, snps, depths)
 #print(quast_data["20000_2_1000_20"])
@@ -395,13 +473,15 @@ modified_quast_data = preprocess_quast_data(quast_data)
 #    print(key)
 #    for m in modified_quast_data[key].keys():
 #        print(m, modified_quast_data[key][m])
-metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp']
+metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp', '# misassemblies']
 #for metric in metrics:
 #quast_plotter_depth_fixed(modified_quast_data, repeat_sizes, copies, snps, depths, metrics[3])
 #for metric in metrics:
-quast_plotter_snp_fixed(modified_quast_data, repeat_sizes, copies, snps, depths, metrics[3])
+#quast_plotter_snp_fixed(modified_quast_data, repeat_sizes, copies, snps, depths, metrics[3])
 #print(quast_parser("../sim5_depth50_max20000/quast_full/report.tsv"))
 #snp2unikmers_map = unikmers_vs_snp_plotter("../true_unikmers.txt")
 #plot_RAmbler_depth_snp_fixed(modified_quast_data, repeat_sizes, copies, sys.argv[1], sys.argv[2], metric)
 #plot_RAmbler_depth_fixed(modified_quast_data, repeat_sizes, copies, snps, sys.argv[1], metrics[3])
 #plot_RAmbler_snp_fixed(modified_quast_data, repeat_sizes, copies, sys.argv[1], depths, metrics[3])
+#get_box_plot_for_genome_fraction_per_contig(modified_quast_data, repeat_sizes, copies, snps, depths)
+get_box_plot_for_ng50_wrt_ref_size(modified_quast_data, repeat_sizes, copies, snps, depths)
