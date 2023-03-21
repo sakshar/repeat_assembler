@@ -478,26 +478,31 @@ def get_sub_plots_for_ng50_vs_misassemblies(quast_data, repeat_sizes, copies, sn
     fig, axs = plt.subplots(copy_no, snp_no)
     fig.suptitle("misassemblies vs. NG50 for repeats of " + repeat_sizes[0] + " Kbp with read coverage " + depths[0] + "x")
     #fig.tight_layout()
+    # add a big axis, hide frame
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel('NG50 (Kbp)')
+    plt.ylabel('number of misassemblies')
     plt.rcParams["figure.autolayout"] = True
     for i in range(copy_no):
         for j in range(snp_no):
             for k in range(4):
                 axs[i, j].plot(ng50s[i][j][k], misassemblies[i][j][k], marker=shapes[k], markeredgecolor=face_colors[k], markerfacecolor='none')
-            axs[i, j].set_title(copies[i]+', '+snps[j]+' bp')
-            axs[i, j].set_xlim(left=0, right=300)
-            axs[i, j].set_ylim(bottom=-1, top=4)
-    #plt.xlabel('NG50')
-    #plt.ylabel('number of misassemblies')
+            axs[i, j].set_title(copies[i]+', '+snps[j]+' bp', fontsize=8)
+            axs[i, j].set_xlim(left=0, right=200)
+            axs[i, j].set_ylim(bottom=-1, top=3)
+
     # Hide x labels and tick labels for top plots and y ticks for right plots.
     for ax in axs.flat:
         ax.label_outer()
-    plt.savefig("../figures/sub_plots/misassemblies.vs.ng50_20K_5-10_100-2000_20.png")
+    plt.savefig("../figures/sub_plots/misassemblies.vs.ng50_10K_5-10_100-2000_40.png")
 
 
-repeat_sizes = ["20"] #, "15", "20"] #["5", "10", "15", "20"]
+repeat_sizes = ["10"] #, "15", "20"] #["5", "10", "15", "20"]
 copies = ["5", "10"] #["2", "5", "10"]
 snps = ["100", "250", "500", "1000", "2000"] #["100", "250", "500", "1000", "2000"]
-depths = ["20"] #["20", "30", "40"]
+depths = ["40"] #["20", "30", "40"]
 #experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
 #metrics = ['# contigs'] #'NG50'] #'# contigs'] #, 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp']
 quast_data = get_quast_reports(repeat_sizes, copies, snps, depths)
