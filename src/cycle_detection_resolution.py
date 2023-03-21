@@ -287,7 +287,7 @@ def get_final_assembly_for_cycles(contig_map, path_to_output, ref_size, edges, n
                 for k in range(1, len(temp_cycle)):
                     edges.pop((temp_cycle[k - 1], temp_cycle[k]))
 
-    print("final:", cycle)
+    # print("cycle:", cycle)
     cyclic_assemblies, all_rotations, cyclic_contigs_list = get_assembly_for_all_rotations_of_a_cycle(contig_map,
                                                                                                       ref_size, cycle,
                                                                                                       edges)
@@ -297,69 +297,305 @@ def get_final_assembly_for_cycles(contig_map, path_to_output, ref_size, edges, n
     # non_cycle_edges = edges.copy()
     for i in range(1, len(cycle)):
         cycle_edges[(cycle[i - 1], cycle[i])] = edges[(cycle[i - 1], cycle[i])]
-    print("all_nodes:", list(nodes.keys()))
     print("cycle_nodes:", cycle_nodes)
     print("non-cycle_nodes:", non_cycle_nodes)
-    print("true_edges:", list(true_edges.keys()))
-    print("current_edges:", list(edges.keys()))
-    print("cycle_edges:", list(cycle_edges.keys()))
-    print("non-cycle_edges:", list(non_cycle_edges.keys()))
-    for assembly in cyclic_assemblies:
-        print(list(assembly[0].keys()), assembly[2], assembly[1])
-        # paths = enumerate_paths(get_adjacency_list(edges))
-    # print("all paths:", paths)
-    # adjusted_paths = []
-    # fragmented_paths = []
+    paths = enumerate_paths(get_adjacency_list(non_cycle_edges))
+    # print("all paths:")
     # for path in paths:
-    #    if path[0] in cycle_nodes:
-    #        new_path = []
-    #        for i in range(len(path)):
-
-
-"""
-def get_final_assembly_without_paths(contig_map, path_to_output):
-    max_output_file = ""
-    max_assembly_seq = ""
-    for id in contig_map.keys():
-        if len(contig_map[id]) > len(max_assembly_seq):
-            max_output_file = id
-            max_assembly_seq = contig_map[id]
-    print(max_output_file + "_final", ":", len(max_assembly_seq))
-    seqs = []
-    record = SeqRecord(Seq(max_assembly_seq), id=max_output_file + "_final",
-                       description="size_" + str(len(max_assembly_seq)))
-    seqs.append(record)
-    SeqIO.write(seqs, path_to_output + max_output_file + "_final.fasta", "fasta")
-
-
-def get_final_assembly(paths, edges, contig_map, path_to_output):
-    max_output_file = ""
-    max_assembly_seq = ""
+    #    print(path)
+    adjusted_paths = []
+    # fragmented_paths = []
     for path in paths:
-        output_file = "".join(path)
-        assembly_seq = ""
-        flag = 0  # only for resolving the first overlap
-        for i in range(1, len(path)):
-            u, v = path[i-1], path[i]
-            if flag == 0:
-                assembly_seq = str(contig_map[u][:-(edges[(u, v)][0][1] - edges[(u, v)][0][0])]) + str(contig_map[v])
-                flag = 1
-            else:
-                assembly_seq = str(assembly_seq[:-(edges[(u, v)][0][1] - edges[(u, v)][0][0])]) + str(contig_map[v])
-        print(output_file, ":", len(assembly_seq))
-        if len(assembly_seq) > len(max_assembly_seq):
-            max_output_file = output_file
-            max_assembly_seq = assembly_seq
+        if path[0] in cycle_nodes:
+            new_path = [path[0]]
+            for i in range(1, len(path)):
+                if path[i] in non_cycle_nodes:
+                    new_path += [path[i]]
+                else:
+                    # if len(path[i:]) > 1 and path[i:] not in fragmented_paths:
+                    #    fragmented_paths.append(path[i:])
+                    break
+            if len(new_path) > 1 and new_path not in adjusted_paths:
+                adjusted_paths.append(new_path)
+        elif path[0] in non_cycle_nodes:
+            new_path = [path[0]]
+            for i in range(1, len(path)):
+                if path[i] in non_cycle_nodes:
+                    new_path += [path[i]]
+                else:
+                    new_path += [path[i]]
+                    # if len(path[i:]) > 1 and path[i:] not in fragmented_paths:
+                    #    fragmented_paths.append(path[i:])
+                    break
+            if len(new_path) > 1 and new_path not in adjusted_paths:
+                adjusted_paths.append(new_path)
+    print("adjusted paths:")
+    for path in adjusted_paths:
+        print(path)
+    # print("fragmented paths:")
+    # for path in fragmented_paths:
+    #    print(path)
+    candidate_assemblies = []
+    if len(non_cycle_nodes) == 0:
+        sorted_candidate_assemblies = sorted(cyclic_assemblies, key=lambda x: abs(x[1]))
         seqs = []
-        record = SeqRecord(Seq(assembly_seq), id=output_file, description="size_"+str(len(assembly_seq)))
-        seqs.append(record)
-        SeqIO.write(seqs, path_to_output + output_file + ".fasta", "fasta")
-    print(max_output_file+"_final", ":", len(max_assembly_seq))
+        best_assembly, best_dist, best_orientations = sorted_candidate_assemblies[0][0], sorted_candidate_assemblies[0][
+            1], sorted_candidate_assemblies[0][2]
+        print("Best assembly:", list(best_assembly.keys()), best_orientations, best_dist, ref_size)
+        print("All assemblies:")
+        for assembly in sorted_candidate_assemblies:
+            print(list(assembly[0].keys()), assembly[2], assembly[1])
+        for id in best_assembly.keys():
+            record = SeqRecord(Seq(best_assembly[id]), id=id, description=str(len(best_assembly[id])))
+            seqs.append(record)
+        SeqIO.write(seqs, path_to_output + "rambler.fasta", "fasta")
+        return
+    if len(adjusted_paths) == 0:
+        for assembly in cyclic_assemblies:
+            current_contigs, current_dist, current_orientations = assembly[0], assembly[1], "||" + assembly[2] + "||"
+            for node in non_cycle_nodes:
+                current_contigs[node] = contig_map[node][0]
+                current_dist -= nodes[node]
+            candidate_assemblies.append((current_contigs, current_dist, current_orientations))
+        sorted_candidate_assemblies = sorted(candidate_assemblies, key=lambda x: abs(x[1]))
+        seqs = []
+        best_assembly, best_dist, best_orientations = sorted_candidate_assemblies[0][0], sorted_candidate_assemblies[0][
+            1], sorted_candidate_assemblies[0][2]
+        print("Best assembly:", list(best_assembly.keys()), best_orientations, best_dist, ref_size)
+        print("All assemblies:")
+        for assembly in sorted_candidate_assemblies:
+            print(list(assembly[0].keys()), assembly[2], assembly[1])
+        for id in best_assembly.keys():
+            record = SeqRecord(Seq(best_assembly[id]), id=id, description=str(len(best_assembly[id])))
+            seqs.append(record)
+        SeqIO.write(seqs, path_to_output + "rambler.fasta", "fasta")
+        return
+    l = 0
+    for assembly in cyclic_assemblies:
+        true_current_contigs, true_current_dist, true_current_orientations = assembly[0], assembly[1], assembly[2]
+        current_rotation = all_rotations[l]
+        true_current_contigs_ids = cyclic_contigs_list[l]
+        # print(current_orientations)
+        # print(current_rotation)
+        # print(current_contigs_ids)
+        for path in adjusted_paths:
+            current_contigs = true_current_contigs.copy()
+            current_contigs_ids = true_current_contigs_ids.copy()
+            current_dist = true_current_dist
+            current_orientations = true_current_orientations[:]
+            # extending the cycle from the end
+            if path[0] == current_rotation[-1]:
+                used_nodes = []
+                current_contig_id = current_contigs_ids[-1]
+                current_contig = current_contigs.pop(current_contig_id)
+                current_dist += len(current_contig)
+                current_orientation = current_orientations[:] + "||"
+                last_edge = edges[(current_rotation[-2], current_rotation[-1])][2]
+                for p in range(1, len(path)):
+                    u, v = path[p - 1], path[p]
+                    current_orientation += edges[(u, v)][2]
+                    if edges[(u, v)][2] == "+":
+                        # handling "++", "-+": continue with the current contig
+                        if last_edge in ["+", "-"]:
+                            current_contig += str(contig_map[v][0][edges[(u, v)][1][1]:])
+                            current_contig_id += v
+                        # handling "*+": break the current one and start a new contig
+                        elif last_edge == "*":
+                            current_contigs[current_contig_id] = current_contig
+                            current_dist -= len(current_contig)
+                            current_contig = str(contig_map[v][0][edges[(u, v)][1][1]:])
+                            current_contig_id = v
+                        last_edge = "+"
+                    elif edges[(u, v)][2] == "-":
+                        # handling "+-", "--": break the current one and start a new contig
+                        if last_edge in ["+", "-"]:
+                            current_contigs[current_contig_id] = current_contig
+                            current_dist -= len(current_contig)
+                            current_contig = str(contig_map[v][0][edges[(u, v)][1][1]:])
+                            current_contig_id = v
+                        # handling "*-": continue with the current contig
+                        elif last_edge == "*":
+                            current_contig += str(contig_map[v][0][edges[(u, v)][1][1]:])
+                            current_contig_id += v
+                        last_edge = "-"
+                    elif edges[(u, v)][2] == "*":
+                        # handling "+*", "-*": continue with the current contig
+                        if last_edge in ["+", "-"]:
+                            current_contig += str(contig_map[v][1][edges[(u, v)][1][1]:])
+                            current_contig_id += v
+                        # handling "**": break the current one and start a new contig
+                        elif last_edge == "*":
+                            current_contigs[current_contig_id] = current_contig
+                            current_dist -= len(current_contig)
+                            current_contig = str(contig_map[v][1][edges[(u, v)][1][1]:])
+                            current_contig_id = v
+                        last_edge = "*"
+                    used_nodes += [v]
+                if current_contig_id not in current_contigs.keys():
+                    current_contigs[current_contig_id] = current_contig
+                    current_dist -= len(current_contig)
+                # extend from the front here, think about it later
+                """
+                current_remaining_nodes = [x for x in non_cycle_nodes if x not in used_nodes]
+                for opposite_path in adjusted_paths:
+                    if opposite_path[-1] == current_rotation[0]:
+                        skip = False
+                        for n in opposite_path[:-1]:
+                            if n not in current_remaining_nodes:
+                                skip = True
+                        if not skip:
+                            current_contig_id = current_contigs_ids[0]
+                            current_contig = current_contigs.pop(current_contig_id)
+                            current_dist += len(current_contig)
+                            current_orientation = "||" + current_orientations[:]
+                            last_edge = edges[(current_rotation[0], current_rotation[1])][2]
+                """
+                remaining_nodes = [x for x in non_cycle_nodes if x not in used_nodes]
+                for node in remaining_nodes:
+                    current_contigs[node] = contig_map[node][0]
+                    current_dist -= nodes[node]
+                candidate_assemblies.append((current_contigs, current_dist, current_orientation))
+            # extending the cycle from the front
+            elif path[-1] == current_rotation[0]:
+                used_nodes = []
+                current_contig_id = current_contigs_ids[0]
+                current_contig = current_contigs.pop(current_contig_id)
+                current_dist += len(current_contig)
+                current_orientation = "||" + current_orientations[:]
+                last_edge = edges[(current_rotation[0], current_rotation[1])][2]
+                for p in range(len(path) - 2, -1, -1):
+                    u, v = path[p], path[p + 1]
+                    current_orientation = edges[(u, v)][2] + current_orientation
+                    if edges[(u, v)][2] == "+":
+                        # handling "++", "-+": continue with the current contig
+                        if last_edge in ["+", "*"]:
+                            current_contig = str(contig_map[u][0][:edges[(u, v)][0][0]]) + current_contig
+                            current_contig_id = u + current_contig_id
+                        # handling "*+": break the current one and start a new contig
+                        elif last_edge == "-":
+                            current_contigs[current_contig_id] = current_contig
+                            current_dist -= len(current_contig)
+                            current_contig = str(contig_map[u][0][:edges[(u, v)][0][0]])
+                            current_contig_id = u
+                        last_edge = "+"
+                    elif edges[(u, v)][2] == "*":
+                        # handling "+-", "--": break the current one and start a new contig
+                        if last_edge in ["+", "*"]:
+                            current_contigs[current_contig_id] = current_contig
+                            current_dist -= len(current_contig)
+                            current_contig = str(contig_map[u][0][:edges[(u, v)][0][0]])
+                            current_contig_id = u
+                        # handling "*-": continue with the current contig
+                        elif last_edge == "-":
+                            current_contig = str(contig_map[u][0][:edges[(u, v)][0][0]]) + current_contig
+                            current_contig_id = u + current_contig_id
+                        last_edge = "*"
+                    elif edges[(u, v)][2] == "-":
+                        # handling "+*", "-*": continue with the current contig
+                        if last_edge in ["+", "*"]:
+                            current_contig = str(contig_map[u][1][:edges[(u, v)][0][0]]) + current_contig
+                            current_contig_id = u + current_contig_id
+                        # handling "**": break the current one and start a new contig
+                        elif last_edge == "-":
+                            current_contigs[current_contig_id] = current_contig
+                            current_dist -= len(current_contig)
+                            current_contig = str(contig_map[u][1][:edges[(u, v)][0][0]])
+                            current_contig_id = u
+                        last_edge = "-"
+                    used_nodes += [u]
+                if current_contig_id not in current_contigs.keys():
+                    current_contigs[current_contig_id] = current_contig
+                    current_dist -= len(current_contig)
+                # extend from the end here,  think about it later
+                remaining_nodes = [x for x in non_cycle_nodes if x not in used_nodes]
+                for node in remaining_nodes:
+                    current_contigs[node] = contig_map[node][0]
+                    current_dist -= nodes[node]
+                candidate_assemblies.append((current_contigs, current_dist, current_orientation))
+            # the path has no cycle nodes
+            elif path[0] in non_cycle_nodes and path[-1] in non_cycle_nodes:
+                used_nodes = [path[0]]
+                current_contig_id = path[0]
+                current_contig = ""
+                # current_dist += len(current_contig)
+                current_orientation = "||" + current_orientations[:] + "||"
+                last_edge = ""
+                flag = False
+                for p in range(1, len(path)):
+                    u, v = path[p - 1], path[p]
+                    current_orientation += edges[(u, v)][2]
+                    # when merging the first edge on a path
+                    if not flag:
+                        if edges[(u, v)][2] == "+":
+                            current_contig = str(contig_map[u][0]) + str(contig_map[v][0][edges[(u, v)][1][1]:])
+                            last_edge = "+"
+                        elif edges[(u, v)][2] == "-":
+                            current_contig = str(contig_map[u][1]) + str(contig_map[v][0][edges[(u, v)][1][1]:])
+                            last_edge = "-"
+                        elif edges[(u, v)][2] == "*":
+                            current_contig = str(contig_map[u][0]) + str(contig_map[v][1][edges[(u, v)][1][1]:])
+                            last_edge = "*"
+                        current_contig_id += v
+                        flag = True
+                    else:
+                        if edges[(u, v)][2] == "+":
+                            # handling "++", "-+": continue with the current contig
+                            if last_edge in ["+", "-"]:
+                                current_contig += str(contig_map[v][0][edges[(u, v)][1][1]:])
+                                current_contig_id += v
+                            # handling "*+": break the current one and start a new contig
+                            elif last_edge == "*":
+                                current_contigs[current_contig_id] = current_contig
+                                current_dist -= len(current_contig)
+                                current_contig = str(contig_map[v][0][edges[(u, v)][1][1]:])
+                                current_contig_id = v
+                            last_edge = "+"
+                        elif edges[(u, v)][2] == "-":
+                            # handling "+-", "--": break the current one and start a new contig
+                            if last_edge in ["+", "-"]:
+                                current_contigs[current_contig_id] = current_contig
+                                current_dist -= len(current_contig)
+                                current_contig = str(contig_map[v][0][edges[(u, v)][1][1]:])
+                                current_contig_id = v
+                            # handling "*-": continue with the current contig
+                            elif last_edge == "*":
+                                current_contig += str(contig_map[v][0][edges[(u, v)][1][1]:])
+                                current_contig_id += v
+                            last_edge = "-"
+                        elif edges[(u, v)][2] == "*":
+                            # handling "+*", "-*": continue with the current contig
+                            if last_edge in ["+", "-"]:
+                                current_contig += str(contig_map[v][1][edges[(u, v)][1][1]:])
+                                current_contig_id += v
+                            # handling "**": break the current one and start a new contig
+                            elif last_edge == "*":
+                                current_contigs[current_contig_id] = current_contig
+                                current_dist -= len(current_contig)
+                                current_contig = str(contig_map[v][1][edges[(u, v)][1][1]:])
+                                current_contig_id = v
+                            last_edge = "*"
+                    used_nodes.append(v)
+                if current_contig_id not in current_contigs.keys():
+                    current_contigs[current_contig_id] = current_contig
+                    current_dist -= len(current_contig)
+                remaining_nodes = [x for x in non_cycle_nodes if x not in used_nodes]
+                for node in remaining_nodes:
+                    current_contigs[node] = contig_map[node][0]
+                    current_dist -= nodes[node]
+                candidate_assemblies.append((current_contigs, current_dist, current_orientation))
+        l += 1
+    sorted_candidate_assemblies = sorted(candidate_assemblies, key=lambda x: abs(x[1]))
     seqs = []
-    record = SeqRecord(Seq(max_assembly_seq), id=max_output_file+"_final", description="size_" + str(len(max_assembly_seq)))
-    seqs.append(record)
-    SeqIO.write(seqs, path_to_output + max_output_file + "_final.fasta", "fasta")
-"""
+    best_assembly, best_dist, best_orientations = sorted_candidate_assemblies[0][0], sorted_candidate_assemblies[0][1], \
+                                                  sorted_candidate_assemblies[0][2]
+    print("Best assembly:", list(best_assembly.keys()), best_orientations, best_dist, ref_size)
+    print("All assemblies:")
+    for assembly in sorted_candidate_assemblies:
+        print(list(assembly[0].keys()), assembly[2], assembly[1])
+    for id in best_assembly.keys():
+        record = SeqRecord(Seq(best_assembly[id]), id=id, description=str(len(best_assembly[id])))
+        seqs.append(record)
+    SeqIO.write(seqs, path_to_output + "rambler.fasta", "fasta")
 
 
 def paf_reader(infile, slack):
@@ -547,7 +783,7 @@ def cycle_info_writer():
                             # print("--------------------")
                         else:
                             print("--------------------")
-                            print(repeat_size, copy, snp, depth, cycle)
+                            print(repeat_size, copy, snp, depth)
                             rows.append([repeat_size, copy, snp, depth, "Cycle", nodes, edges, cycle])
                             get_final_assembly_for_cycles(assembly_map, path_to_output, ref_size, edges, nodes)
                             print("--------------------")
@@ -558,49 +794,3 @@ def cycle_info_writer():
 
 
 cycle_info_writer()
-
-"""
-k = 21
-slack = 100
-tolerance = 1000
-methods = ["naive", "cc"]
-repeat_size, copy, snp, depth = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
-ref_size = 100000 + (copy * repeat_size)
-parent_dir = str(repeat_size) + "_" + str(copy) + "_" + str(snp)
-paf_file = "../output/"+parent_dir+"/"+str(depth)+"/"+methods[0]+"/overlaps.paf"
-path_to_output = "../output/"+parent_dir+"/"+str(depth)+"/"+methods[0]+"/final_assembly/"
-contigs_file = SeqIO.parse("../output/"+parent_dir+"/"+str(depth)+"/"+methods[0]+"/asm.fasta", 'fasta')
-assembly_map = get_assembly_map(contigs_file)
-overlap_data = paf_reader(paf_file, slack)
-edges, nodes = get_overlap_graph(overlap_data, repeat_size, tolerance)
-if len(list(nodes.keys())) == 0:
-    print("----- the best possible assembly with length -----")
-    get_final_assembly_without_paths(assembly_map, path_to_output)
-else:
-    print("----- contigs with length -----")
-    print(nodes)
-    print("----- overlaps with suffix and prefix windows -----")
-    for edge in edges.keys():
-        print(edge, ":", edges[edge])
-    graph_all_nodes = get_adjacency_list_with_all_nodes(edges, nodes)
-    graph = get_adjacency_list(edges)
-    print("----- overlap graph as adjacency list -----")
-    print(graph)
-    print("----- check for DAG -----")
-    if isCyclic(graph_all_nodes, nodes):
-        print("The overlap graph contains cycle :'(")
-        print("----- the best possible assembly with length -----")
-        get_final_assembly_without_paths(assembly_map, path_to_output)
-    else:
-        print("The overlap graph is a DAG :)")
-        paths = enumerate_paths(graph)
-        print("----- all possible paths in the overlap graph -----")
-        for path in paths:
-            print(path)
-        if len(paths) == 0:
-            print("----- the best possible assembly with length -----")
-            get_final_assembly_without_paths(assembly_map, path_to_output)
-        else:
-            print("----- all possible assemblies and the best one with length -----")
-            get_final_assembly(paths, edges, assembly_map, path_to_output)
-"""
