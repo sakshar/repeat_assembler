@@ -456,11 +456,48 @@ def get_box_plot_for_genome_fraction_per_contig(quast_data, repeat_sizes, copies
     # show plot
     plt.savefig("../figures/box_plots/box_plot_for_gf_per_contig_10K-20K_5-10_500-2000_20-30.png")
 
+def get_sub_plots_for_ng50_vs_misassemblies(quast_data, repeat_sizes, copies, snps, depths):
+    copy_no, snp_no = len(copies), len(snps)
+    ng50s, misassemblies = np.zeros((copy_no, snp_no, 4)), np.zeros((copy_no, snp_no, 4))
+    # for i in range(experiment_no):
+    for repeat_size in repeat_sizes:
+        repeat_size += "000"
+        i = 0
+        for copy in copies:
+            j = 0
+            for snp in snps:
+                for depth in depths:
+                    id = repeat_size + "_" + copy + "_" + snp + "_" + depth
+                    for k in range(4):
+                        ng50, misassembly = quast_data[id][metrics[1]][k] / 1000, quast_data[id][metrics[4]][k]
+                        ng50s[i][j][k], misassemblies[i][j][k] = ng50, misassembly
+                j += 1
+            i += 1
+    shapes = ['^', 'o', 's', 'd']
+    face_colors = ['red', 'blue', 'green', 'violet']
+    fig, axs = plt.subplots(copy_no, snp_no)
+    fig.suptitle("misassemblies vs. NG50 for repeats of " + repeat_sizes[0] + " Kbp with read coverage " + depths[0] + "x")
+    #fig.tight_layout()
+    plt.rcParams["figure.autolayout"] = True
+    for i in range(copy_no):
+        for j in range(snp_no):
+            for k in range(4):
+                axs[i, j].plot(ng50s[i][j][k], misassemblies[i][j][k], marker=shapes[k], markeredgecolor=face_colors[k], markerfacecolor='none')
+            axs[i, j].set_title(copies[i]+', '+snps[j]+' bp')
+            axs[i, j].set_xlim(left=0, right=300)
+            axs[i, j].set_ylim(bottom=-1, top=4)
+    #plt.xlabel('NG50')
+    #plt.ylabel('number of misassemblies')
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    for ax in axs.flat:
+        ax.label_outer()
+    plt.savefig("../figures/sub_plots/misassemblies.vs.ng50_20K_5-10_100-2000_20.png")
 
-repeat_sizes = ["10", "15", "20"] #["5", "10", "15", "20"]
-copies = ["2", "5", "10"] #["2", "5", "10"]
+
+repeat_sizes = ["20"] #, "15", "20"] #["5", "10", "15", "20"]
+copies = ["5", "10"] #["2", "5", "10"]
 snps = ["100", "250", "500", "1000", "2000"] #["100", "250", "500", "1000", "2000"]
-depths = ["30"] #["20", "30", "40"]
+depths = ["20"] #["20", "30", "40"]
 #experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
 #metrics = ['# contigs'] #'NG50'] #'# contigs'] #, 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp']
 quast_data = get_quast_reports(repeat_sizes, copies, snps, depths)
@@ -484,4 +521,5 @@ metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp
 #plot_RAmbler_depth_fixed(modified_quast_data, repeat_sizes, copies, snps, sys.argv[1], metrics[3])
 #plot_RAmbler_snp_fixed(modified_quast_data, repeat_sizes, copies, sys.argv[1], depths, metrics[3])
 #get_box_plot_for_genome_fraction_per_contig(modified_quast_data, repeat_sizes, copies, snps, depths)
-get_box_plot_for_ng50_wrt_ref_size(modified_quast_data, repeat_sizes, copies, snps, depths)
+#get_box_plot_for_ng50_wrt_ref_size(modified_quast_data, repeat_sizes, copies, snps, depths)
+get_sub_plots_for_ng50_vs_misassemblies(modified_quast_data, repeat_sizes, copies, snps, depths)
