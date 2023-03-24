@@ -381,6 +381,27 @@ def preprocess_quast_data(quast_data):
     return modified_quast_data
 
 
+def get_bar_chart_for_misassemblies(quast_data, repeat_sizes, copies, snps, depths):
+    misassemblies_map = [{'N/A': 0}, {'N/A': 0}, {'N/A': 0}, {'N/A': 0}]
+    for repeat_size in repeat_sizes:
+        repeat_size += "000"
+        for copy in copies:
+            for snp in snps:
+                for depth in depths:
+                    id = repeat_size + "_" + copy + "_" + snp + "_" + depth
+                    for i in range(4):
+                        misassembly = quast_data[id][metrics[4]][i]
+                        contig = quast_data[id][metrics[0]][i]
+                        if contig == 0:
+                            misassemblies_map[i]['N/A'] += 1
+                        elif misassembly not in misassemblies_map[i].keys():
+                            misassemblies_map[i][misassembly] = 1
+                        else:
+                            misassemblies_map[i][misassembly] += 1
+    for i in range(4):
+        print(misassemblies_map[i])
+
+
 def get_box_plot_for_ng50_wrt_ref_size(quast_data, repeat_sizes, copies, snps, depths):
     experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
     ng50_wrt_ref_size = [np.zeros(experiment_no), np.zeros(experiment_no), np.zeros(experiment_no),
@@ -652,4 +673,5 @@ metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp
 #get_box_plot_for_ng50_wrt_ref_size(modified_quast_data, repeat_sizes, copies, snps, depths)
 #get_sub_plots_for_ng50_vs_misassemblies(modified_quast_data, repeat_sizes, copies, snps, depths)
 #get_sub_plots_for_ng50_vs_gf_per_contig(modified_quast_data, repeat_sizes, copies, snps, depths)
-subplotter(modified_quast_data, repeat_sizes, copies, snps, depths)
+#subplotter(modified_quast_data, repeat_sizes, copies, snps, depths)
+get_bar_chart_for_misassemblies(modified_quast_data, repeat_sizes, copies, snps, depths)
