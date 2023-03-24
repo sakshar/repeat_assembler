@@ -329,14 +329,15 @@ def get_final_assembly_for_cycles(contig_map, path_to_output, ref_size, edges, n
                     break
             if len(new_path) > 1 and new_path not in adjusted_paths:
                 adjusted_paths.append(new_path)
-    print("adjusted paths:")
-    for path in adjusted_paths:
-        print(path)
+    # print("adjusted paths:")
+    # for path in adjusted_paths:
+    #    print(path)
     # print("fragmented paths:")
     # for path in fragmented_paths:
     #    print(path)
     candidate_assemblies = []
     if len(non_cycle_nodes) == 0:
+        print("----- no non-cycle nodes -----")
         sorted_candidate_assemblies = sorted(cyclic_assemblies, key=lambda x: abs(x[1]))
         seqs = []
         best_assembly, best_dist, best_orientations = sorted_candidate_assemblies[0][0], sorted_candidate_assemblies[0][
@@ -351,6 +352,7 @@ def get_final_assembly_for_cycles(contig_map, path_to_output, ref_size, edges, n
         SeqIO.write(seqs, path_to_output + "rambler.fasta", "fasta")
         return
     if len(adjusted_paths) == 0:
+        print("----- no paths available -----")
         for assembly in cyclic_assemblies:
             current_contigs, current_dist, current_orientations = assembly[0], assembly[1], "||" + assembly[2] + "||"
             for node in non_cycle_nodes:
@@ -370,6 +372,7 @@ def get_final_assembly_for_cycles(contig_map, path_to_output, ref_size, edges, n
             seqs.append(record)
         SeqIO.write(seqs, path_to_output + "rambler.fasta", "fasta")
         return
+    print("----- paths available outside of cycles -----")
     l = 0
     for assembly in cyclic_assemblies:
         true_current_contigs, true_current_dist, true_current_orientations = assembly[0], assembly[1], assembly[2]
@@ -385,6 +388,7 @@ def get_final_assembly_for_cycles(contig_map, path_to_output, ref_size, edges, n
             current_orientations = true_current_orientations[:]
             # extending the cycle from the end
             if path[0] == current_rotation[-1]:
+                print("end", path)
                 used_nodes = []
                 current_contig_id = current_contigs_ids[-1]
                 current_contig = current_contigs.pop(current_contig_id)
@@ -435,28 +439,79 @@ def get_final_assembly_for_cycles(contig_map, path_to_output, ref_size, edges, n
                     current_contigs[current_contig_id] = current_contig
                     current_dist -= len(current_contig)
                 # extend from the front here, think about it later
-                """
-                current_remaining_nodes = [x for x in non_cycle_nodes if x not in used_nodes]
                 for opposite_path in adjusted_paths:
+                    temp_current_contigs = current_contigs.copy()
+                    temp_current_contigs_ids = list(current_contigs.keys())
+                    temp_current_dist = current_dist
+                    temp_current_orientations = current_orientation[:]
+                    temp_remaining_nodes = [x for x in non_cycle_nodes if x not in used_nodes]
+                    temp_used_nodes = used_nodes.copy()
                     if opposite_path[-1] == current_rotation[0]:
                         skip = False
                         for n in opposite_path[:-1]:
-                            if n not in current_remaining_nodes:
+                            if n not in temp_remaining_nodes:
                                 skip = True
                         if not skip:
-                            current_contig_id = current_contigs_ids[0]
-                            current_contig = current_contigs.pop(current_contig_id)
-                            current_dist += len(current_contig)
-                            current_orientation = "||" + current_orientations[:]
+                            print("extending a cycle from the front", opposite_path)
+                            current_contig_id = \
+                            [c for c in temp_current_contigs_ids if c.startswith(current_rotation[0])][0]
+                            current_contig = temp_current_contigs.pop(current_contig_id)
+                            temp_current_dist += len(current_contig)
+                            temp_current_orientations = "||" + temp_current_orientations
                             last_edge = edges[(current_rotation[0], current_rotation[1])][2]
-                """
-                remaining_nodes = [x for x in non_cycle_nodes if x not in used_nodes]
-                for node in remaining_nodes:
-                    current_contigs[node] = contig_map[node][0]
-                    current_dist -= nodes[node]
-                candidate_assemblies.append((current_contigs, current_dist, current_orientation))
+                            for q in range(len(opposite_path) - 2, -1, -1):
+                                s, t = opposite_path[q], opposite_path[q + 1]
+                                temp_current_orientations = edges[(s, t)][2] + temp_current_orientations
+                                if edges[(s, t)][2] == "+":
+                                    # handling "++", "-+": continue with the current contig
+                                    if last_edge in ["+", "*"]:
+                                        current_contig = str(contig_map[s][0][:edges[(s, t)][0][0]]) + current_contig
+                                        current_contig_id = s + current_contig_id
+                                    # handling "*+": break the current one and start a new contig
+                                    elif last_edge == "-":
+                                        temp_current_contigs[current_contig_id] = current_contig
+                                        temp_current_dist -= len(current_contig)
+                                        current_contig = str(contig_map[s][0][:edges[(s, t)][0][0]])
+                                        current_contig_id = s
+                                    last_edge = "+"
+                                elif edges[(s, t)][2] == "*":
+                                    # handling "+-", "--": break the current one and start a new contig
+                                    if last_edge in ["+", "*"]:
+                                        temp_current_contigs[current_contig_id] = current_contig
+                                        temp_current_dist -= len(current_contig)
+                                        current_contig = str(contig_map[s][0][:edges[(s, t)][0][0]])
+                                        current_contig_id = s
+                                    # handling "*-": continue with the current contig
+                                    elif last_edge == "-":
+                                        current_contig = str(contig_map[s][0][:edges[(s, t)][0][0]]) + current_contig
+                                        current_contig_id = s + current_contig_id
+                                    last_edge = "*"
+                                elif edges[(s, t)][2] == "-":
+                                    # handling "+*", "-*": continue with the current contig
+                                    if last_edge in ["+", "*"]:
+                                        current_contig = str(contig_map[s][1][:edges[(s, t)][0][0]]) + current_contig
+                                        current_contig_id = s + current_contig_id
+                                    # handling "**": break the current one and start a new contig
+                                    elif last_edge == "-":
+                                        temp_current_contigs[current_contig_id] = current_contig
+                                        temp_current_dist -= len(current_contig)
+                                        current_contig = str(contig_map[s][1][:edges[(s, t)][0][0]])
+                                        current_contig_id = s
+                                    last_edge = "-"
+                                temp_used_nodes += [s]
+                            if current_contig_id not in temp_current_contigs.keys():
+                                temp_current_contigs[current_contig_id] = current_contig
+                                temp_current_dist -= len(current_contig)
+                    remaining_nodes = [x for x in non_cycle_nodes if x not in temp_used_nodes]
+                    for node in remaining_nodes:
+                        temp_current_contigs[node] = contig_map[node][0]
+                        temp_current_dist -= nodes[node]
+                    if (temp_current_contigs, temp_current_dist, temp_current_orientations) not in candidate_assemblies:
+                        candidate_assemblies.append(
+                            (temp_current_contigs, temp_current_dist, temp_current_orientations))
             # extending the cycle from the front
             elif path[-1] == current_rotation[0]:
+                print("front", path)
                 used_nodes = []
                 current_contig_id = current_contigs_ids[0]
                 current_contig = current_contigs.pop(current_contig_id)
@@ -507,11 +562,83 @@ def get_final_assembly_for_cycles(contig_map, path_to_output, ref_size, edges, n
                     current_contigs[current_contig_id] = current_contig
                     current_dist -= len(current_contig)
                 # extend from the end here,  think about it later
+                for opposite_path in adjusted_paths:
+                    temp_current_contigs = current_contigs.copy()
+                    temp_current_contigs_ids = list(current_contigs.keys())
+                    temp_current_dist = current_dist
+                    temp_current_orientations = current_orientation[:]
+                    temp_remaining_nodes = [x for x in non_cycle_nodes if x not in used_nodes]
+                    temp_used_nodes = used_nodes.copy()
+                    if opposite_path[0] == current_rotation[-1]:
+                        skip = False
+                        for n in opposite_path[1:]:
+                            if n not in temp_remaining_nodes:
+                                skip = True
+                        if not skip:
+                            print("extending a cycle from the end", opposite_path)
+                            current_contig_id = \
+                            [c for c in temp_current_contigs_ids if c.endswith(current_rotation[-1])][0]
+                            current_contig = temp_current_contigs.pop(current_contig_id)
+                            temp_current_dist += len(current_contig)
+                            temp_current_orientations = temp_current_orientations + "||"
+                            last_edge = edges[(current_rotation[-2], current_rotation[-1])][2]
+                            for q in range(1, len(opposite_path)):
+                                s, t = opposite_path[q - 1], opposite_path[q]
+                                temp_current_orientations = temp_current_orientations + edges[(s, t)][2]
+                                if edges[(s, t)][2] == "+":
+                                    # handling "++", "-+": continue with the current contig
+                                    if last_edge in ["+", "-"]:
+                                        current_contig += str(contig_map[t][0][edges[(s, t)][1][1]:])
+                                        current_contig_id += t
+                                    # handling "*+": break the current one and start a new contig
+                                    elif last_edge == "*":
+                                        temp_current_contigs[current_contig_id] = current_contig
+                                        temp_current_dist -= len(current_contig)
+                                        current_contig = str(contig_map[t][0][edges[(s, t)][1][1]:])
+                                        current_contig_id = t
+                                    last_edge = "+"
+                                elif edges[(s, t)][2] == "-":
+                                    # handling "+-", "--": break the current one and start a new contig
+                                    if last_edge in ["+", "-"]:
+                                        temp_current_contigs[current_contig_id] = current_contig
+                                        temp_current_dist -= len(current_contig)
+                                        current_contig = str(contig_map[t][0][edges[(s, t)][1][1]:])
+                                        current_contig_id = t
+                                    # handling "*-": continue with the current contig
+                                    elif last_edge == "*":
+                                        current_contig += str(contig_map[t][0][edges[(s, t)][1][1]:])
+                                        current_contig_id += t
+                                    last_edge = "-"
+                                elif edges[(s, t)][2] == "*":
+                                    # handling "+*", "-*": continue with the current contig
+                                    if last_edge in ["+", "-"]:
+                                        current_contig += str(contig_map[t][1][edges[(s, t)][1][1]:])
+                                        current_contig_id += t
+                                    # handling "**": break the current one and start a new contig
+                                    elif last_edge == "*":
+                                        temp_current_contigs[current_contig_id] = current_contig
+                                        temp_current_dist -= len(current_contig)
+                                        current_contig = str(contig_map[t][1][edges[(s, t)][1][1]:])
+                                        current_contig_id = t
+                                    last_edge = "*"
+                                temp_used_nodes += [t]
+                            if current_contig_id not in temp_current_contigs.keys():
+                                temp_current_contigs[current_contig_id] = current_contig
+                                temp_current_dist -= len(current_contig)
+                    remaining_nodes = [x for x in non_cycle_nodes if x not in temp_used_nodes]
+                    for node in remaining_nodes:
+                        temp_current_contigs[node] = contig_map[node][0]
+                        temp_current_dist -= nodes[node]
+                    if (temp_current_contigs, temp_current_dist, temp_current_orientations) not in candidate_assemblies:
+                        candidate_assemblies.append(
+                            (temp_current_contigs, temp_current_dist, temp_current_orientations))
+                """
                 remaining_nodes = [x for x in non_cycle_nodes if x not in used_nodes]
                 for node in remaining_nodes:
                     current_contigs[node] = contig_map[node][0]
                     current_dist -= nodes[node]
                 candidate_assemblies.append((current_contigs, current_dist, current_orientation))
+                """
             # the path has no cycle nodes
             elif path[0] in non_cycle_nodes and path[-1] in non_cycle_nodes:
                 used_nodes = [path[0]]
