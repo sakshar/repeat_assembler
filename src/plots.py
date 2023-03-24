@@ -439,7 +439,8 @@ def get_box_plot_for_ng50_wrt_ref_size(quast_data, repeat_sizes, copies, snps, d
     ax.get_yaxis().tick_left()
 
     # show plot
-    plt.savefig("../figures/box_plots/ng50_wrt_ref_size/10K-20K_2-10_100-2000_30.png")
+    plt.savefig("../figures/box_plots/ng50_wrt_ref_size/5K-20K_2-10_100-2000_20-40.png")
+
 
 def get_box_plot_for_genome_fraction_per_contig(quast_data, repeat_sizes, copies, snps, depths):
     experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
@@ -476,7 +477,7 @@ def get_box_plot_for_genome_fraction_per_contig(quast_data, repeat_sizes, copies
     ax.get_yaxis().tick_left()
 
     # show plot
-    plt.savefig("../figures/box_plots/box_plot_for_gf_per_contig_10K-20K_5-10_500-2000_20-30.png")
+    plt.savefig("../figures/box_plots/gf_per_contig/10K-20K_5-10_100-2000_30.png")
 
 
 def get_sub_plots_for_ng50_vs_misassemblies(quast_data, repeat_sizes, copies, snps, depths, xlim, ylim):
@@ -635,18 +636,18 @@ def get_sub_plots_for_ng50_vs_contig_no(quast_data, repeat_sizes, copies, snps, 
 
 def subplotter(quast_data, repeat_sizes, copies, snps, depths):
     x_lim = [200, 250, 300]
-    y_lim = (-10, 110)
+    y_lim = (0, 20)
     for r in range(1, len(repeat_sizes)+1):
         repeat = repeat_sizes[r-1:r]
         for d in range(1, len(depths)+1):
             dep = depths[d-1:d]
-            get_sub_plots_for_ng50_vs_gf_per_contig(quast_data, repeat, copies, snps, dep, x_lim[r-1], y_lim)
+            get_sub_plots_for_ng50_vs_contig_no(quast_data, repeat, copies, snps, dep, x_lim[r-1], y_lim)
 
 
 repeat_sizes = ["10", "15", "20"] #, "15", "20"] #["5", "10", "15", "20"]
 copies = ["5", "10"] #["2", "5", "10"]
 snps = ["100", "250", "500", "1000", "2000"] #["100", "250", "500", "1000", "2000"]
-depths = ["20", "30", "40"] #["20", "30", "40"]
+depths = ["30"] #["20", "30", "40"]
 #experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
 #metrics = ['# contigs'] #'NG50'] #'# contigs'] #, 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp']
 quast_data = get_quast_reports(repeat_sizes, copies, snps, depths)
@@ -669,9 +670,9 @@ metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp
 #plot_RAmbler_depth_snp_fixed(modified_quast_data, repeat_sizes, copies, sys.argv[1], sys.argv[2], metric)
 #plot_RAmbler_depth_fixed(modified_quast_data, repeat_sizes, copies, snps, sys.argv[1], metrics[3])
 #plot_RAmbler_snp_fixed(modified_quast_data, repeat_sizes, copies, sys.argv[1], depths, metrics[3])
-#get_box_plot_for_genome_fraction_per_contig(modified_quast_data, repeat_sizes, copies, snps, depths)
+get_box_plot_for_genome_fraction_per_contig(modified_quast_data, repeat_sizes, copies, snps, depths)
 #get_box_plot_for_ng50_wrt_ref_size(modified_quast_data, repeat_sizes, copies, snps, depths)
 #get_sub_plots_for_ng50_vs_misassemblies(modified_quast_data, repeat_sizes, copies, snps, depths)
 #get_sub_plots_for_ng50_vs_gf_per_contig(modified_quast_data, repeat_sizes, copies, snps, depths)
 #subplotter(modified_quast_data, repeat_sizes, copies, snps, depths)
-get_bar_chart_for_misassemblies(modified_quast_data, repeat_sizes, copies, snps, depths)
+#get_bar_chart_for_misassemblies(modified_quast_data, repeat_sizes, copies, snps, depths)
