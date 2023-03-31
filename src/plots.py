@@ -970,4 +970,4 @@ metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp
 #get_bar_chart_for_misassemblies(modified_quast_data, repeat_sizes, copies, snps, depths)
 #get_box_plot_for_genome_fraction_per_contig_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #get_box_plot_for_ng50_wrt_ref_size_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
-subplotter_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds, sub_plot_ylimits["ng50_vs_misassemblies"])
+#subplotter_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds, sub_plot_ylimits["ng50_vs_misassemblies"])
