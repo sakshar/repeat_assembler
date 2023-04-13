@@ -701,7 +701,7 @@ def get_box_plot_for_genome_fraction_per_contig_hyperparameters(out_path, quast_
     ax.get_yaxis().tick_left()
 
     # show plot
-    plt.savefig(out_path + "box_plots/gf_per_contig_10K-20K_2-10_100-2000_20-40.png")
+    plt.savefig(out_path + "box_plots/gf_per_contig_10K-20K_5-10_100-2000_30.png")
 
 
 def get_box_plot_for_ng50_wrt_ref_size_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
@@ -747,7 +747,7 @@ def get_box_plot_for_ng50_wrt_ref_size_hyperparameters(out_path, quast_data, rep
     ax.get_yaxis().tick_left()
 
     # show plot
-    plt.savefig(out_path + "box_plots/ng50_wrt_ref_size_10K-20K_2-10_100-2000_20-40.png")
+    plt.savefig(out_path + "box_plots/ng50_wrt_ref_size_10K-20K_5-10_100-2000_30.png")
 
 
 def get_sub_plots_for_ng50_vs_misassemblies_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, xlim, ylim, tolerances, thresholds):
@@ -937,7 +937,7 @@ thresholds = ["5", "10", "15", "20"]
 repeat_sizes = ["10", "15", "20"] #, "15", "20"] #["5", "10", "15", "20"]
 copies = ["5", "10"] #["2", "5", "10"]
 snps = ["100", "250", "500", "1000", "2000"] #["100", "250", "500", "1000", "2000"]
-depths = ["20", "30", "40"] #["20", "30", "40"]
+depths = ["30"] #["20", "30", "40"]
 input_path = "/Users/sakshar5068/Desktop/repeat_assembler/hyperparameters/quast/"
 figure_path = "/Users/sakshar5068/Desktop/repeat_assembler/hyperparameters/figures/"
 #experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
@@ -969,5 +969,5 @@ metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp
 #subplotter(modified_quast_data, repeat_sizes, copies, snps, depths)
 #get_bar_chart_for_misassemblies(modified_quast_data, repeat_sizes, copies, snps, depths)
 #get_box_plot_for_genome_fraction_per_contig_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
-#get_box_plot_for_ng50_wrt_ref_size_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
+get_box_plot_for_ng50_wrt_ref_size_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #subplotter_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds, sub_plot_ylimits["ng50_vs_misassemblies"])
