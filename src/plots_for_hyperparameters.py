@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import csv
+import seaborn as sns
+import pandas as pd
 import xlsxwriter
 import sys
 
@@ -68,13 +70,13 @@ def preprocess_quast_data(quast_data):
 
 
 def get_box_plot_for_genome_fraction_per_contig_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
-    comparison_no = len(tolerances) * len(thresholds)
-    xticklabels = []
-    for to in tolerances:
-        for th in thresholds:
-            xticklabels.append(to+"_"+th)
+    #comparison_no = len(tolerances) * len(thresholds)
+    #xticklabels = []
+    #for to in tolerances:
+        #for th in thresholds:
+            #xticklabels.append(to+"_"+th)
     experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
-    genome_fraction_per_contig = np.zeros((experiment_no, comparison_no))
+    genome_fraction_per_contig = np.zeros((len(tolerances), experiment_no, len(thresholds)))
     i = 0
     #for i in range(experiment_no):
     for repeat_size in repeat_sizes:
@@ -87,10 +89,46 @@ def get_box_plot_for_genome_fraction_per_contig_hyperparameters(out_path, quast_
                         for k in range(len(thresholds)):
                             gf, contigs_no = quast_data[tolerances[j]][id][metrics[2]][k], quast_data[tolerances[j]][id][metrics[0]][k]
                             if contigs_no != 0:
-                                genome_fraction_per_contig[i][j*len(thresholds)+k] = gf / contigs_no
+                                genome_fraction_per_contig[j][i][k] = gf / contigs_no
                     i += 1
     print(i, experiment_no)
 
+    sns.set_theme()
+
+    fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
+    fig.suptitle(
+        "box plot of genome fraction per contig for different hyperparameters (to_th)")
+    # fig.tight_layout()
+    # add a big axis, hide frame
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel('thresholds')
+    plt.ylabel('genome fraction per contig (%)')
+    #plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=6)
+    # plt.rcParams["figure.autolayout"] = True
+    plt.tight_layout()
+    for i in range(len(tolerances)):
+        # need to convert the numpy array into a dataframe
+        #           thresholds misassemblies
+        # 0             5           1
+        # 1             10          0
+        df = pd.DataFrame()
+        df_thresholds, df_gfs = [], []
+        for j in range(experiment_no):
+            for k in range(len(thresholds)):
+                df_thresholds.append(int(thresholds[k]))
+                df_gfs.append(genome_fraction_per_contig[i][j][k])
+        df['thresholds'], df['gf_per_contig'] = df_thresholds, df_gfs
+
+        sns.boxplot(df, ax=axs[i], x='thresholds', y='gf_per_contig')
+        sns.color_palette("deep")
+        axs[i].set_ylabel(tolerances[i])
+
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    for ax in axs.flat:
+        ax.label_outer()
+    """
     fig = plt.figure(figsize=(14, 7))
     ax = fig.add_subplot(111)
 
@@ -107,19 +145,19 @@ def get_box_plot_for_genome_fraction_per_contig_hyperparameters(out_path, quast_
     # ticks
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
-
+    """
     # show plot
     plt.savefig(out_path + "box_plots_all/gf_per_contig_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
 
 
 def get_box_plot_for_ng50_wrt_ref_size_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
-    comparison_no = len(tolerances) * len(thresholds)
-    xticklabels = []
-    for to in tolerances:
-        for th in thresholds:
-            xticklabels.append(to+"_"+th)
+    #comparison_no = len(tolerances) * len(thresholds)
+    #xticklabels = []
+    #for to in tolerances:
+        #for th in thresholds:
+            #xticklabels.append(to+"_"+th)
     experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
-    ng50_wrt_ref_size = np.zeros((experiment_no, comparison_no))
+    ng50_wrt_ref_size = np.zeros((len(tolerances), experiment_no, len(thresholds)))
     i = 0
     # for i in range(experiment_no):
     for repeat_size in repeat_sizes:
@@ -131,9 +169,48 @@ def get_box_plot_for_ng50_wrt_ref_size_hyperparameters(out_path, quast_data, rep
                     id = repeat_size + "_" + copy + "_" + snp + "_" + depth
                     for j in range(len(tolerances)):
                         for k in range(len(thresholds)):
-                            ng50_wrt_ref_size[i][j * len(thresholds) + k] = quast_data[tolerances[j]][id][metrics[1]][k] / ref_size
+                            ng50_wrt_ref_size[j][i][k] = quast_data[tolerances[j]][id][metrics[1]][k] / ref_size
                     i += 1
     print(i, experiment_no)
+
+
+    sns.set_theme()
+
+    fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
+    fig.suptitle(
+        "box plot of NG50 w.r.t. reference genome size for different hyperparameters (to_th)")
+    # fig.tight_layout()
+    # add a big axis, hide frame
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel('thresholds')
+    plt.ylabel('NG50')
+    # plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=6)
+    # plt.rcParams["figure.autolayout"] = True
+    plt.tight_layout()
+    for i in range(len(tolerances)):
+        # need to convert the numpy array into a dataframe
+        #           thresholds misassemblies
+        # 0             5           1
+        # 1             10          0
+        df = pd.DataFrame()
+        df_thresholds, df_ng50s = [], []
+        for j in range(experiment_no):
+            for k in range(len(thresholds)):
+                df_thresholds.append(int(thresholds[k]))
+                df_ng50s.append(ng50_wrt_ref_size[i][j][k])
+        df['thresholds'], df['NG50_wrt_ref'] = df_thresholds, df_ng50s
+
+        sns.boxplot(df, ax=axs[i], x='thresholds', y='NG50_wrt_ref')
+        sns.color_palette("deep")
+        axs[i].set_ylabel(tolerances[i])
+
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    for ax in axs.flat:
+        ax.label_outer()
+
+    """
     fig = plt.figure(figsize=(14, 7))
     ax = fig.add_subplot(111)
 
@@ -150,20 +227,20 @@ def get_box_plot_for_ng50_wrt_ref_size_hyperparameters(out_path, quast_data, rep
     # ticks
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
-
+    """
     # show plot
     plt.savefig(out_path + "box_plots_all/ng50_wrt_ref_size_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
 
 
 def get_box_plot_for_misassemblies_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
-    comparison_no = len(tolerances) * len(thresholds)
-    xticklabels = []
-    for to in tolerances:
-        for th in thresholds:
-            xticklabels.append(to+"_"+th)
+    #comparison_no = len(tolerances) * len(thresholds)
+    #xticklabels = []
+    #for to in tolerances:
+        #for th in thresholds:
+            #xticklabels.append(to+"_"+th)
     experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
-    misassemblies = np.zeros((experiment_no, comparison_no))
-    misassemblies_freq = np.zeros((5, comparison_no))
+    misassemblies = np.zeros((len(tolerances), experiment_no, len(thresholds)))
+    #misassemblies_freq = np.zeros((5, comparison_no))
     i = 0
     #for i in range(experiment_no):
     for repeat_size in repeat_sizes:
@@ -175,10 +252,34 @@ def get_box_plot_for_misassemblies_hyperparameters(out_path, quast_data, repeat_
                     for j in range(len(tolerances)):
                         for k in range(len(thresholds)):
                             misassembly = quast_data[tolerances[j]][id][metrics[3]][k]
-                            misassemblies[i][j * len(thresholds) + k] = misassembly
-                            misassemblies_freq[misassembly][j * len(thresholds) + k] += 1
+                            misassemblies[j][i][k] = misassembly
+                            #misassemblies_freq[misassembly][j * len(thresholds) + k] += 1
                     i += 1
     print(i, experiment_no)
+
+    fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
+    fig.suptitle(
+        "box plot of misassemblies for different hyperparameters (to_th)")
+    # fig.tight_layout()
+    # add a big axis, hide frame
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel('thresholds')
+    plt.ylabel('# of misassemblies')
+    # plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=6)
+    # plt.rcParams["figure.autolayout"] = True
+    plt.tight_layout()
+    for i in range(len(tolerances)):
+        axs[i].boxplot(misassemblies[i])
+        axs[i].set_xticklabels(thresholds)
+        axs[i].set_ylabel(tolerances[i])
+
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    for ax in axs.flat:
+        ax.label_outer()
+
+    """
     fig = plt.figure(figsize=(14, 7))
     ax = fig.add_subplot(111)
 
@@ -195,10 +296,193 @@ def get_box_plot_for_misassemblies_hyperparameters(out_path, quast_data, repeat_
     # ticks
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
-
+    """
     # show plot
-    np.savetxt(out_path + "box_plots_all/misassemblies_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".csv", misassemblies_freq.transpose(), delimiter=",")
+    #np.savetxt(out_path + "box_plots_all/misassemblies_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".csv", misassemblies_freq.transpose(), delimiter=",")
     plt.savefig(out_path + "box_plots_all/misassemblies_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+
+
+def get_box_plot_for_contigs_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
+    #comparison_no = len(tolerances) * len(thresholds)
+    #xticklabels = []
+    #for to in tolerances:
+        #for th in thresholds:
+            #xticklabels.append(to+"_"+th)
+    experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
+    contigs = np.zeros((len(tolerances), experiment_no, len(thresholds)))
+    #misassemblies_freq = np.zeros((5, comparison_no))
+    i = 0
+    #for i in range(experiment_no):
+    for repeat_size in repeat_sizes:
+        repeat_size += "000"
+        for copy in copies:
+            for snp in snps:
+                for depth in depths:
+                    id = repeat_size + "_" + copy + "_" + snp + "_" + depth
+                    for j in range(len(tolerances)):
+                        for k in range(len(thresholds)):
+                            contig = quast_data[tolerances[j]][id][metrics[0]][k]
+                            contigs[j][i][k] = contig
+                            #misassemblies_freq[misassembly][j * len(thresholds) + k] += 1
+                    i += 1
+    print(i, experiment_no)
+
+    fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
+    fig.suptitle(
+        "box plot of contigs for different hyperparameters (to_th)")
+    # fig.tight_layout()
+    # add a big axis, hide frame
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel('thresholds')
+    plt.ylabel('# of contigs')
+    # plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=6)
+    # plt.rcParams["figure.autolayout"] = True
+    plt.tight_layout()
+    for i in range(len(tolerances)):
+        axs[i].boxplot(contigs[i])
+        axs[i].set_xticklabels(thresholds)
+        axs[i].set_ylabel(tolerances[i])
+
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    for ax in axs.flat:
+        ax.label_outer()
+
+    """
+    fig = plt.figure(figsize=(14, 7))
+    ax = fig.add_subplot(111)
+
+    # Creating axes instance
+    bp = ax.boxplot(misassemblies)
+
+    # x-axis labels
+    ax.set_xticklabels(xticklabels, rotation=90)
+
+    # Adding title
+    plt.title("box plot of misassemblies for different hyperparameters (to_th)")
+
+    # Removing top axes and right axes
+    # ticks
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_left()
+    """
+    # show plot
+    #np.savetxt(out_path + "box_plots_all/misassemblies_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".csv", misassemblies_freq.transpose(), delimiter=",")
+    plt.savefig(out_path + "box_plots_all/contigs_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+
+
+def get_violin_plots_for_misassemblies_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
+    experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
+    misassemblies = np.zeros((len(tolerances), experiment_no, len(thresholds)))
+    i = 0
+    for repeat_size in repeat_sizes:
+        repeat_size += "000"
+        for copy in copies:
+            for snp in snps:
+                for depth in depths:
+                    id = repeat_size + "_" + copy + "_" + snp + "_" + depth
+                    for j in range(len(tolerances)):
+                        for k in range(len(thresholds)):
+                            misassembly = quast_data[tolerances[j]][id][metrics[3]][k]
+                            misassemblies[j][i][k] = misassembly
+                    i += 1
+    print(i, experiment_no)
+
+    sns.set_theme()
+
+    fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
+    fig.suptitle(
+        "violin plot of misassemblies for different hyperparameters (to_th)")
+    # fig.tight_layout()
+    # add a big axis, hide frame
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel('thresholds')
+    plt.ylabel('# of misassemblies')
+    # plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=6)
+    # plt.rcParams["figure.autolayout"] = True
+    plt.tight_layout()
+    for i in range(len(tolerances)):
+        # need to convert the numpy array into a dataframe
+        #           thresholds misassemblies
+        # 0             5           1
+        # 1             10          0
+        df = pd.DataFrame()
+        df_thresholds, df_misassemblies = [], []
+        for j in range(experiment_no):
+            for k in range(len(thresholds)):
+                df_thresholds.append(int(thresholds[k]))
+                df_misassemblies.append(misassemblies[i][j][k])
+        df['thresholds'], df['misassemblies'] = df_thresholds, df_misassemblies
+
+        sns.violinplot(df, ax=axs[i], x='thresholds', y='misassemblies')
+        sns.color_palette("deep")
+        axs[i].set_ylabel(tolerances[i])
+
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    for ax in axs.flat:
+        ax.label_outer()
+
+    plt.savefig(out_path + "violin_plots_all/misassemblies_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+
+
+def get_violin_plots_for_contigs_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
+    experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
+    contigs = np.zeros((len(tolerances), experiment_no, len(thresholds)))
+    i = 0
+    for repeat_size in repeat_sizes:
+        repeat_size += "000"
+        for copy in copies:
+            for snp in snps:
+                for depth in depths:
+                    id = repeat_size + "_" + copy + "_" + snp + "_" + depth
+                    for j in range(len(tolerances)):
+                        for k in range(len(thresholds)):
+                            contig = quast_data[tolerances[j]][id][metrics[0]][k]
+                            contigs[j][i][k] = contig
+                    i += 1
+    print(i, experiment_no)
+
+    sns.set_theme()
+
+    fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
+    fig.suptitle(
+        "violin plot of contigs for different hyperparameters (to_th)")
+    # fig.tight_layout()
+    # add a big axis, hide frame
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel('thresholds')
+    plt.ylabel('# of contigs')
+    # plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=6)
+    # plt.rcParams["figure.autolayout"] = True
+    plt.tight_layout()
+    for i in range(len(tolerances)):
+        # need to convert the numpy array into a dataframe
+        #           thresholds misassemblies
+        # 0             5           1
+        # 1             10          0
+        df = pd.DataFrame()
+        df_thresholds, df_contigs = [], []
+        for j in range(experiment_no):
+            for k in range(len(thresholds)):
+                df_thresholds.append(int(thresholds[k]))
+                df_contigs.append(contigs[i][j][k])
+        df['thresholds'], df['contigs'] = df_thresholds, df_contigs
+
+        sns.violinplot(df, ax=axs[i], x='thresholds', y='contigs')
+        sns.color_palette("deep")
+        axs[i].set_ylabel(tolerances[i])
+
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    for ax in axs.flat:
+        ax.label_outer()
+
+    plt.savefig(out_path + "violin_plots_all/contigs_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+
 
 
 # need to modify the sub-plot methods
@@ -406,7 +690,10 @@ modified_quast_data = preprocess_quast_data(quast_data)
 #metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp', '# misassemblies']
 metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# misassemblies']
 #print(modified_quast_data)
-#get_box_plot_for_genome_fraction_per_contig_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
+get_box_plot_for_genome_fraction_per_contig_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #get_box_plot_for_ng50_wrt_ref_size_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
-get_box_plot_for_misassemblies_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
+#get_box_plot_for_misassemblies_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
+#get_box_plot_for_contigs_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
+#get_violin_plots_for_misassemblies_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
+#get_violin_plots_for_contigs_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #subplotter_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds, sub_plotter_method)
