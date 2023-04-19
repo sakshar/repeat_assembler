@@ -69,6 +69,92 @@ def preprocess_quast_data(quast_data):
     return modified_quast_data
 
 
+def get_box_plot_for_ComAcCon_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
+    #comparison_no = len(tolerances) * len(thresholds)
+    #xticklabels = []
+    #for to in tolerances:
+        #for th in thresholds:
+            #xticklabels.append(to+"_"+th)
+    experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
+    effective_gf_per_contig = np.zeros((len(tolerances), experiment_no, len(thresholds)))
+    ng50_wrt_ref = np.zeros((len(tolerances), experiment_no, len(thresholds)))
+    i = 0
+    #for i in range(experiment_no):
+    for repeat_size in repeat_sizes:
+        repeat_size += "000"
+        for copy in copies:
+            ref_size = 100000 + int(repeat_size) * int(copy)
+            for snp in snps:
+                for depth in depths:
+                    id = repeat_size + "_" + copy + "_" + snp + "_" + depth
+                    for j in range(len(tolerances)):
+                        for k in range(len(thresholds)):
+                            gf, contigs_no = quast_data[tolerances[j]][id][metrics[2]][k], quast_data[tolerances[j]][id][metrics[0]][k]
+                            ng50, misassembly = quast_data[tolerances[j]][id][metrics[1]][k], quast_data[tolerances[j]][id][metrics[3]][k]
+                            ng50_wrt_ref[j][i][k] = ng50 / ref_size
+                            if contigs_no != 0:
+                                effective_gf_per_contig[j][i][k] = (gf / 100.0) / (contigs_no + misassembly)
+                    i += 1
+    ComAcCon = 2 * effective_gf_per_contig * ng50_wrt_ref / (effective_gf_per_contig + ng50_wrt_ref)
+    print(i, experiment_no)
+
+    sns.set_theme()
+
+    fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
+    fig.suptitle(
+        "box plot of Com-Ac-Con for different hyperparameters (to_th)")
+    # fig.tight_layout()
+    # add a big axis, hide frame
+    fig.add_subplot(111, frameon=False)
+    # hide tick and tick label of the big axis
+    plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.xlabel('thresholds')
+    plt.ylabel('Com-Ac-Con')
+    #plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=6)
+    # plt.rcParams["figure.autolayout"] = True
+    plt.tight_layout()
+    for i in range(len(tolerances)):
+        # need to convert the numpy array into a dataframe
+        #           thresholds misassemblies
+        # 0             5           1
+        # 1             10          0
+        df = pd.DataFrame()
+        df_thresholds, df_comaccons = [], []
+        for j in range(experiment_no):
+            for k in range(len(thresholds)):
+                df_thresholds.append(int(thresholds[k]))
+                df_comaccons.append(ComAcCon[i][j][k])
+        df['thresholds'], df['com-ac-con'] = df_thresholds, df_comaccons
+
+        sns.boxplot(df, ax=axs[i], x='thresholds', y='com-ac-con')
+        sns.color_palette("deep")
+        axs[i].set_ylabel(tolerances[i])
+
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    for ax in axs.flat:
+        ax.label_outer()
+    """
+    fig = plt.figure(figsize=(14, 7))
+    ax = fig.add_subplot(111)
+
+    # Creating axes instance
+    bp = ax.boxplot(genome_fraction_per_contig)
+
+    # x-axis labels
+    ax.set_xticklabels(xticklabels, rotation=90)
+
+    # Adding title
+    plt.title("box plot of genome fraction per contig for different hyperparameters (to_th)")
+
+    # Removing top axes and right axes
+    # ticks
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_left()
+    """
+    # show plot
+    plt.savefig(out_path + "box_plots_all/ComAcCon_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+
+
 def get_box_plot_for_genome_fraction_per_contig_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
     #comparison_no = len(tolerances) * len(thresholds)
     #xticklabels = []
@@ -690,10 +776,11 @@ modified_quast_data = preprocess_quast_data(quast_data)
 #metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp', '# misassemblies']
 metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# misassemblies']
 #print(modified_quast_data)
-get_box_plot_for_genome_fraction_per_contig_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
+#get_box_plot_for_genome_fraction_per_contig_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #get_box_plot_for_ng50_wrt_ref_size_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #get_box_plot_for_misassemblies_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #get_box_plot_for_contigs_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
+get_box_plot_for_ComAcCon_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #get_violin_plots_for_misassemblies_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #get_violin_plots_for_contigs_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #subplotter_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds, sub_plotter_method)
