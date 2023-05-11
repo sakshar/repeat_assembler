@@ -56,24 +56,25 @@ def write_read_stat_to_xcel(input):
     workbook.close()
 
 
-repeat_sizes = [5000, 10000, 15000, 20000, 25000]
-no_of_copies = [2, 5, 10, 20, 50]
-snp_rates = [100, 250, 500, 1000, 2000]
-depths = [10, 20, 30, 40, 50]
+repeat_sizes = [15000] # [5000, 10000, 15000, 20000, 25000]
+no_of_copies = [5, 10] # [2, 5, 10, 20, 50]
+snp_rates = [250, 500, 1000] # [100, 250, 500, 1000, 2000]
+depths = [30] # [10, 20, 30, 40, 50]
 sizes = ["10k", "15k", "20k", "25k"]
-path = '../read_stats/read_stat_'
+#path = '../read_stats/read_stat_'
+path = '../data/HiFi/in_del/'
 #for size in sizes:
 #    input_file = path + size
 #    write_read_stat_to_xcel(input_file)
-"""
+
 for repeat_size in repeat_sizes:
     for copy in no_of_copies:
         for snp in snp_rates:
             for depth in depths:
                 input = path + str(repeat_size) + "_" + str(copy) + "_" + str(snp) + "/" + str(depth)
                 write_histo_to_xcel(input)
-"""
-write_histo_to_xcel("../arabidopsis/ERR6210723")
+
+#write_histo_to_xcel("../arabidopsis/ERR6210723")
 """
 histo_, map_ = kmer_histo_generator('./yeast_complex/k21/hifiasm.histo')
 workbook = xlsxwriter.Workbook('./yeast_complex/k21/hifiasm.xlsx')

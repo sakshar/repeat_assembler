@@ -2,6 +2,8 @@ from random import randint
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+import seaborn as sns
+import pandas as pd
 import csv
 import xlsxwriter
 import sys
@@ -347,17 +349,56 @@ def unikmers_vs_snp_plotter(file):
             snp2unikmers_map[(id[0], id[1])] = dict()
         snp2unikmers_map[(id[0], id[1])][int(id[2])] = count
     kmer_file.close()
+    #print(snp2unikmers_map)
+
+    sns.set_theme()
+
+    plt.figure(figsize=(10, 7))
+    # ax = fig.add_subplot(111)
+    plt.title("cat plot of the number of true unikmers vs. repeat size for repeats with 5 copies")
+    # need to convert the numpy array into a dataframe
+    #           thresholds misassemblies
+    # 0             5           1
+    # 1             10          0
+    df = pd.DataFrame()
+    df_repeats, df_counts, df_snps = [], [], []
+    repeats = ["10000", "15000", "20000", "25000"]
+    copy = '5'
+    pSNP = [100, 250, 500, 1000, 2000]
+    snp_tags = [r'$p_{SNP}$ = 1/100', r'$p_{SNP}$ = 1/250', r'$p_{SNP}$ = 1/500', r'$p_{SNP}$ = 1/1000', r'$p_{SNP}$ = 1/2000']
+    for i in repeats:
+        k = 0
+        for j in snp_tags:
+            df_repeats.append(int(i)//1000)
+            df_snps.append(j)
+            df_counts.append(snp2unikmers_map[(i, copy)][pSNP[k]])
+            k += 1
+
+    df['repeat_size'], df['mutation rate'], df['counts'] = df_repeats, df_snps, df_counts
+
+    sns.catplot(
+        data=df, kind="bar",
+        x='repeat_size', y='counts', hue='mutation rate', palette="deep", alpha=0.8)
+    #sns.color_palette("deep")
+    plt.xlabel("Repeat size (Kbp)")
+    plt.ylabel("# of true unikmers")
+    plt.ylim([99000, 109000])
+    #plt.legend.set_title("mutation rate")
+    # show plot
+    plt.savefig("../figures/unikmers_vs_snp_10k-25k_5.png")
+    """
     snps = [[], [], [], [], []]
     groups = []
-    for repeat_size in ["5000", "10000", "15000", "20000"]:
-        for copies in ["2", "5", "10", "20"]:
-            temp_repeat_size = str(int(repeat_size)//1000)+"k"
-            groups.append(temp_repeat_size+"-"+copies)
+    for repeat_size in ["10000", "15000", "20000", "25000"]:
+        for copies in ["5"]:
+            temp_repeat_size = str(int(repeat_size)//1000)
+            #groups.append(temp_repeat_size+"-"+copies)
+            groups.append(temp_repeat_size)
             i = 0
             for snp in [100, 250, 500, 1000, 2000]:
                 snps[i].append(snp2unikmers_map[(repeat_size, copies)][snp])
                 i += 1
-    N = 16
+    N = 4
     ind = np.arange(N)
     width = 0.15
     bar1 = plt.bar(ind, snps[0], width, color=colors[0])
@@ -365,13 +406,14 @@ def unikmers_vs_snp_plotter(file):
     bar3 = plt.bar(ind+width*2, snps[2], width, color=colors[2])
     bar4 = plt.bar(ind+width*3, snps[3], width, color=colors[3])
     bar5 = plt.bar(ind+width*4, snps[4], width, color=colors[4])
-    plt.xlabel("Repeat_size-Copies")
+    plt.xlabel("Repeat_size (Kbp)")
     plt.ylabel("# of true unikmers")
-    plt.ylim([98000, 107000])
+    plt.ylim([99000, 109000])
     plt.xticks(ind + width*2, groups, rotation=45)
-    plt.legend((bar1, bar2, bar3, bar4, bar5), ('per 100 bp', 'per 250 bp', 'per 500 bp', 'per 1000 bp', 'per 2000 bp'))
+    plt.legend((bar1, bar2, bar3, bar4, bar5), ('P_SNP = 1/100', 'P_SNP = 1/250', 'P_SNP = 1/500', 'P_SNP = 1/1000', 'P_SNP = 1/2000'))
     plt.tight_layout()
-    plt.savefig("../figures/unikmers_vs_snp.png")
+    plt.savefig("../figures/unikmers_vs_snp_10k-25k_5.png")
+    """
     return snp2unikmers_map
 
 
@@ -942,9 +984,9 @@ input_path = "/Users/sakshar5068/Desktop/repeat_assembler/hyperparameters/quast/
 figure_path = "/Users/sakshar5068/Desktop/repeat_assembler/hyperparameters/figures/"
 #experiment_no = len(repeat_sizes) * len(copies) * len(snps) * len(depths)
 #metrics = ['# contigs'] #'NG50'] #'# contigs'] #, 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp']
-quast_data = get_quast_reports(input_path, repeat_sizes, copies, snps, depths)
+#quast_data = get_quast_reports(input_path, repeat_sizes, copies, snps, depths)
 #print(quast_data["20000_2_1000_20"])
-modified_quast_data = preprocess_quast_data(quast_data)
+#modified_quast_data = preprocess_quast_data(quast_data)
 #print(modified_quast_data["20000_2_1000_20"])
 #for id in modified_quast_data.keys():
 #    print(id, modified_quast_data[id])
@@ -958,7 +1000,7 @@ metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp
 #for metric in metrics:
 #quast_plotter_snp_fixed(modified_quast_data, repeat_sizes, copies, snps, depths, metrics[3])
 #print(quast_parser("../sim5_depth50_max20000/quast_full/report.tsv"))
-#snp2unikmers_map = unikmers_vs_snp_plotter("../true_unikmers.txt")
+snp2unikmers_map = unikmers_vs_snp_plotter("../true_unikmers.txt")
 #plot_RAmbler_depth_snp_fixed(modified_quast_data, repeat_sizes, copies, sys.argv[1], sys.argv[2], metric)
 #plot_RAmbler_depth_fixed(modified_quast_data, repeat_sizes, copies, snps, sys.argv[1], metrics[3])
 #plot_RAmbler_snp_fixed(modified_quast_data, repeat_sizes, copies, sys.argv[1], depths, metrics[3])
@@ -969,5 +1011,7 @@ metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# mismatches per 100 kbp
 #subplotter(modified_quast_data, repeat_sizes, copies, snps, depths)
 #get_bar_chart_for_misassemblies(modified_quast_data, repeat_sizes, copies, snps, depths)
 #get_box_plot_for_genome_fraction_per_contig_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
-get_box_plot_for_ng50_wrt_ref_size_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
+#get_box_plot_for_ng50_wrt_ref_size_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #subplotter_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds, sub_plot_ylimits["ng50_vs_misassemblies"])
+#penguins = sns.load_dataset('penguins')
+#print(penguins)

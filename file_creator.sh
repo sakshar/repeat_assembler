@@ -1,9 +1,9 @@
 export DI=/Users/sakshar5068/Desktop/repeat_assembler
 export REFS=$DI/data/ref
 export READS=$DI/data/HiFi
-export VERKKO_DIR=$DI/verkko
+export VERKKO_DIR=$DI/verkko/in_del
 
-for repeat_size in 25000;
+for repeat_size in 20000 25000;
 do
   for copy in 5 10;
   do

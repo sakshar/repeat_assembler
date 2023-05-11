@@ -479,7 +479,7 @@ def get_violin_plots_for_misassemblies_hyperparameters(out_path, quast_data, rep
 
     fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
     fig.suptitle(
-        "violin plot of misassemblies for different hyperparameters (to_th)")
+        "boxen plot of misassemblies for different hyperparameters (to_th)")
     # fig.tight_layout()
     # add a big axis, hide frame
     fig.add_subplot(111, frameon=False)
@@ -503,7 +503,7 @@ def get_violin_plots_for_misassemblies_hyperparameters(out_path, quast_data, rep
                 df_misassemblies.append(misassemblies[i][j][k])
         df['thresholds'], df['misassemblies'] = df_thresholds, df_misassemblies
 
-        sns.violinplot(df, ax=axs[i], x='thresholds', y='misassemblies')
+        sns.boxenplot(df, ax=axs[i], x='thresholds', y='misassemblies')
         sns.color_palette("deep")
         axs[i].set_ylabel(tolerances[i])
 
@@ -511,7 +511,7 @@ def get_violin_plots_for_misassemblies_hyperparameters(out_path, quast_data, rep
     for ax in axs.flat:
         ax.label_outer()
 
-    plt.savefig(out_path + "violin_plots_all/misassemblies_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+    plt.savefig(out_path + "boxen_plots_all/misassemblies_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
 
 
 def get_violin_plots_for_contigs_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
@@ -535,7 +535,7 @@ def get_violin_plots_for_contigs_hyperparameters(out_path, quast_data, repeat_si
 
     fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
     fig.suptitle(
-        "violin plot of contigs for different hyperparameters (to_th)")
+        "boxen plot of contigs for different hyperparameters (to_th)")
     # fig.tight_layout()
     # add a big axis, hide frame
     fig.add_subplot(111, frameon=False)
@@ -559,7 +559,7 @@ def get_violin_plots_for_contigs_hyperparameters(out_path, quast_data, repeat_si
                 df_contigs.append(contigs[i][j][k])
         df['thresholds'], df['contigs'] = df_thresholds, df_contigs
 
-        sns.violinplot(df, ax=axs[i], x='thresholds', y='contigs')
+        sns.boxenplot(df, ax=axs[i], x='thresholds', y='contigs')
         sns.color_palette("deep")
         axs[i].set_ylabel(tolerances[i])
 
@@ -567,7 +567,7 @@ def get_violin_plots_for_contigs_hyperparameters(out_path, quast_data, repeat_si
     for ax in axs.flat:
         ax.label_outer()
 
-    plt.savefig(out_path + "violin_plots_all/contigs_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+    plt.savefig(out_path + "boxen_plots_all/contigs_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
 
 
 
@@ -780,7 +780,7 @@ metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# misassemblies']
 #get_box_plot_for_ng50_wrt_ref_size_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #get_box_plot_for_misassemblies_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #get_box_plot_for_contigs_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
-get_box_plot_for_ComAcCon_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
+#get_box_plot_for_ComAcCon_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #get_violin_plots_for_misassemblies_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
-#get_violin_plots_for_contigs_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
+get_violin_plots_for_contigs_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #subplotter_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds, sub_plotter_method)
