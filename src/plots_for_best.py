@@ -128,7 +128,7 @@ def get_box_plots(out_path, quast_data, repeat_sizes, copies, snps, depths, asse
 
     plt.figure(figsize=(10, 7))
     #ax = fig.add_subplot(111)
-    plt.title("box plot of " + plot_tag + " for different assemblers")
+    #plt.title("box plot of " + plot_tag + " for different assemblers")
     # need to convert the numpy array into a dataframe
     #           thresholds misassemblies
     # 0             5           1
@@ -147,9 +147,19 @@ def get_box_plots(out_path, quast_data, repeat_sizes, copies, snps, depths, asse
             elif method == 3:
                 df_vals.append(effective_gf_per_contig[j][k])
     df['assemblers'], df[plot_tag] = df_assemblers, df_vals
-    if method == 0:
-        print(df)
+    #if method == 0:
+    #    print(df)
+    plt.rcParams.update({'font.size': 22})
     sns.boxplot(df, x='assemblers', y=plot_tag)
+    plt.xlabel("")
+    if method == 0:
+        plt.ylabel("assembly-score")
+    elif method == 1:
+        plt.ylabel("genome fraction per contig")
+    elif method == 2:
+        plt.ylabel("NG50 w.r.t reference genome (" + r'$\eta$)')
+    elif method == 3:
+        plt.ylabel("effective genome fraction per contig (" + r'$\zeta$)')
     sns.color_palette("deep")
 
     # show plot
@@ -181,7 +191,7 @@ def get_violin_plots(out_path, quast_data, repeat_sizes, copies, snps, depths, a
 
     plt.figure(figsize=(10, 7))
     # ax = fig.add_subplot(111)
-    plt.title("boxen plot of " + plot_tag + " for different assemblers")
+    #plt.title("boxen plot of " + plot_tag + " for different assemblers")
     # need to convert the numpy array into a dataframe
     #           thresholds misassemblies
     # 0             5           1
@@ -198,10 +208,76 @@ def get_violin_plots(out_path, quast_data, repeat_sizes, copies, snps, depths, a
 
     df['assemblers'], df[plot_tag] = df_assemblers, df_vals
 
+    plt.rcParams.update({'font.size': 22})
     sns.boxenplot(df, x='assemblers', y=plot_tag)
+    plt.xlabel("")
+    if method == 0:
+        plt.ylabel("# of contigs")
+    elif method == 1:
+        plt.ylabel("# of mis-assemblies")
     sns.color_palette("deep")
     # show plot
     plt.savefig(out_path+plot_tag+"_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+
+
+def get_box_plots_for_pSNP(out_path, quast_data, repeat_sizes, copies, snps, depths):
+    experiment_no = len(repeat_sizes) * len(copies) * len(depths)
+    gf_per_contig = np.zeros((experiment_no, len(snps)))
+    contigs = np.zeros((experiment_no, len(snps)))
+    misassemblies = np.zeros((experiment_no, len(snps)))
+    ng50_wrt_ref = np.zeros((experiment_no, len(snps)))
+    effective_gf_per_contig = np.zeros((experiment_no, len(snps)))
+    ComAcCon = np.zeros((experiment_no, len(snps)))
+    i = 0
+    for repeat_size in repeat_sizes:
+        repeat_size += "000"
+        for copy in copies:
+            ref_size = 100000 + int(repeat_size) * int(copy)
+            for depth in depths:
+                j = 0
+                for snp in snps:
+                    id = repeat_size + "_" + copy + "_" + snp + "_" + depth
+                    gf, contigs_no = quast_data[id][metrics[2]][0], quast_data[id][metrics[0]][0]
+                    ng50, misassembly = quast_data[id][metrics[1]][0], quast_data[id][metrics[3]][0]
+                    ng50_wrt_ref[i][j] = ng50 / ref_size
+                    misassemblies[i][j] = misassembly
+                    if contigs_no != 0:
+                        contigs[i][j] = contigs_no
+                        gf_per_contig[i][j] = (gf / 100.0) / contigs_no
+                        effective_gf_per_contig[i][j] = (gf / 100.0) / (contigs_no + misassembly)
+                        ComAcCon[i][j] = 2 * effective_gf_per_contig[i][j] * ng50_wrt_ref[i][j] / (effective_gf_per_contig[i][j] + ng50_wrt_ref[i][j])
+                    j += 1
+                i += 1
+    print(i, experiment_no)
+    plot_tag = 'asm-score_SNP'
+    snp_tags = [r'$p_{SNP}$ = 1/100', r'$p_{SNP}$ = 1/250', r'$p_{SNP}$ = 1/500', r'$p_{SNP}$ = 1/1000',
+                r'$p_{SNP}$ = 1/2000']
+    sns.set_theme()
+
+    plt.figure(figsize=(10, 7))
+    # ax = fig.add_subplot(111)
+    # plt.title("boxen plot of " + plot_tag + " for different assemblers")
+    # need to convert the numpy array into a dataframe
+    #           thresholds misassemblies
+    # 0             5           1
+    # 1             10          0
+    df = pd.DataFrame()
+    df_pSNPs, df_vals = [], []
+    for i in range(experiment_no):
+        for j in range(len(snps)):
+            df_pSNPs.append(snp_tags[j])
+            df_vals.append(ComAcCon[i][j])
+
+    df['pSNPs'], df[plot_tag] = df_pSNPs, df_vals
+    print(df)
+    plt.rcParams.update({'font.size': 22})
+    sns.boxplot(df, x='pSNPs', y=plot_tag)
+    plt.xlabel("")
+    plt.ylabel("assembly-score")
+    sns.color_palette("deep")
+    # show plot
+    plt.savefig(out_path + plot_tag + "_" + repeat_sizes[0] + "K-" + repeat_sizes[-1] + "K_" + copies[0] + "-" + copies[
+        -1] + "_" + snps[0] + "-" + snps[-1] + "_" + depths[0] + "-" + depths[-1] + ".png")
 
 
 # need to modify the sub-plot methods
@@ -268,10 +344,10 @@ def subplotter(out_path, quast_data, repeat_sizes, copies, snps, depths, assembl
 
 
 assemblers = ["RAmbler", "Hifiasm", "HiCANU", "Verkko"]
-repeat_sizes = ["15", "20", "25"] #, "15", "20"] #["5", "10", "15", "20"]
-copies = ["5"] #["2", "5", "10"]
-snps = ["250", "500", "1000"] #["100", "250", "500", "1000", "2000"]
-depths = ["30"] #["20", "30", "40"]
+repeat_sizes = ["10", "15", "20"] #, "15", "20"] #["5", "10", "15", "20"]
+copies = ["2", "5", "10"] #["2", "5", "10"]
+snps = ["100", "250", "500", "1000", "2000"] #["100", "250", "500", "1000", "2000"]
+depths = ["20", "30", "40"] #["20", "30", "40"]
 sub_plot = {0: "ng50_vs_contig_no", 1: "ng50_vs_misassemblies", 2: "ng50_vs_gf_per_contig"}
 box_plot = {0: "com-ac-con", 1: "gf_per_contig", 2: "ng50_wrt_ref", 3: "effective_gf_per_contig"}
 violin_plot = {0: "contigs", 1: "misassemblies"}
@@ -282,14 +358,15 @@ sub_plot_ylimits = {sub_plot[0]: (0, 7),
 #box_plot_method = 2
 #violin_plot_method = 1
 best_hyperparameters = "20_15"
-input_path = "/Users/sakshar5068/Desktop/repeat_assembler/in_del5/quast/"
-figure_path = "/Users/sakshar5068/Desktop/repeat_assembler/in_del5/figures/"
+input_path = "/Users/sakshar5068/Desktop/repeat_assembler/best/20_15/quast/"
+figure_path = "/Users/sakshar5068/Desktop/repeat_assembler/figures_paper/"
 quast_data = get_quast_reports(input_path, repeat_sizes, copies, snps, depths)
 
 modified_quast_data = preprocess_quast_data(quast_data)
 metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# misassemblies']
-for box in range(4):
-    get_box_plots(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, assemblers, box)
-for violin in range(2):
-    get_violin_plots(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, assemblers, violin)
+#for box in range(4):
+#    get_box_plots(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, assemblers, box)
+#for violin in range(2):
+#    get_violin_plots(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, assemblers, violin)
+get_box_plots_for_pSNP(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths)
 #subplotter(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds, sub_plotter_method)

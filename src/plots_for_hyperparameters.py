@@ -101,15 +101,15 @@ def get_box_plot_for_ComAcCon_hyperparameters(out_path, quast_data, repeat_sizes
     sns.set_theme()
 
     fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
-    fig.suptitle(
-        "box plot of Com-Ac-Con for different hyperparameters (to_th)")
+    #fig.suptitle("box plot of Com-Ac-Con for different hyperparameters (to_th)")
     # fig.tight_layout()
     # add a big axis, hide frame
     fig.add_subplot(111, frameon=False)
     # hide tick and tick label of the big axis
     plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.rcParams.update({'font.size': 22})
     plt.xlabel('thresholds')
-    plt.ylabel('Com-Ac-Con')
+    plt.ylabel('assembly-score')
     #plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=6)
     # plt.rcParams["figure.autolayout"] = True
     plt.tight_layout()
@@ -124,9 +124,9 @@ def get_box_plot_for_ComAcCon_hyperparameters(out_path, quast_data, repeat_sizes
             for k in range(len(thresholds)):
                 df_thresholds.append(int(thresholds[k]))
                 df_comaccons.append(ComAcCon[i][j][k])
-        df['thresholds'], df['com-ac-con'] = df_thresholds, df_comaccons
+        df['thresholds'], df['assembly-score'] = df_thresholds, df_comaccons
 
-        sns.boxplot(df, ax=axs[i], x='thresholds', y='com-ac-con')
+        sns.boxplot(df, ax=axs[i], x='thresholds', y='assembly-score')
         sns.color_palette("deep")
         axs[i].set_ylabel(tolerances[i])
 
@@ -152,7 +152,7 @@ def get_box_plot_for_ComAcCon_hyperparameters(out_path, quast_data, repeat_sizes
     ax.get_yaxis().tick_left()
     """
     # show plot
-    plt.savefig(out_path + "box_plots_all/ComAcCon_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+    plt.savefig(out_path + "ComAcCon_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
 
 
 def get_box_plot_for_genome_fraction_per_contig_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
@@ -174,23 +174,24 @@ def get_box_plot_for_genome_fraction_per_contig_hyperparameters(out_path, quast_
                     for j in range(len(tolerances)):
                         for k in range(len(thresholds)):
                             gf, contigs_no = quast_data[tolerances[j]][id][metrics[2]][k], quast_data[tolerances[j]][id][metrics[0]][k]
+                            misassembly = quast_data[tolerances[j]][id][metrics[3]][k]
                             if contigs_no != 0:
-                                genome_fraction_per_contig[j][i][k] = gf / contigs_no
+                                genome_fraction_per_contig[j][i][k] = (gf / 100.0) / (contigs_no + misassembly)
                     i += 1
     print(i, experiment_no)
 
     sns.set_theme()
 
     fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
-    fig.suptitle(
-        "box plot of genome fraction per contig for different hyperparameters (to_th)")
+    #fig.suptitle("box plot of genome fraction per contig for different hyperparameters (to_th)")
     # fig.tight_layout()
     # add a big axis, hide frame
     fig.add_subplot(111, frameon=False)
     # hide tick and tick label of the big axis
     plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.rcParams.update({'font.size': 22})
     plt.xlabel('thresholds')
-    plt.ylabel('genome fraction per contig (%)')
+    plt.ylabel("effective genome fraction per contig (" + r'$\zeta$)')
     #plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=6)
     # plt.rcParams["figure.autolayout"] = True
     plt.tight_layout()
@@ -233,7 +234,7 @@ def get_box_plot_for_genome_fraction_per_contig_hyperparameters(out_path, quast_
     ax.get_yaxis().tick_left()
     """
     # show plot
-    plt.savefig(out_path + "box_plots_all/gf_per_contig_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+    plt.savefig(out_path + "eff_gf_per_contig_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
 
 
 def get_box_plot_for_ng50_wrt_ref_size_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
@@ -263,15 +264,15 @@ def get_box_plot_for_ng50_wrt_ref_size_hyperparameters(out_path, quast_data, rep
     sns.set_theme()
 
     fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
-    fig.suptitle(
-        "box plot of NG50 w.r.t. reference genome size for different hyperparameters (to_th)")
+    #fig.suptitle("box plot of NG50 w.r.t. reference genome size for different hyperparameters (to_th)")
     # fig.tight_layout()
     # add a big axis, hide frame
     fig.add_subplot(111, frameon=False)
     # hide tick and tick label of the big axis
     plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.rcParams.update({'font.size': 22})
     plt.xlabel('thresholds')
-    plt.ylabel('NG50')
+    plt.ylabel("NG50 w.r.t reference genome (" + r'$\eta$)')
     # plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=6)
     # plt.rcParams["figure.autolayout"] = True
     plt.tight_layout()
@@ -315,7 +316,7 @@ def get_box_plot_for_ng50_wrt_ref_size_hyperparameters(out_path, quast_data, rep
     ax.get_yaxis().tick_left()
     """
     # show plot
-    plt.savefig(out_path + "box_plots_all/ng50_wrt_ref_size_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+    plt.savefig(out_path + "ng50_wrt_ref_size_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
 
 
 def get_box_plot_for_misassemblies_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
@@ -478,15 +479,15 @@ def get_violin_plots_for_misassemblies_hyperparameters(out_path, quast_data, rep
     sns.set_theme()
 
     fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
-    fig.suptitle(
-        "boxen plot of misassemblies for different hyperparameters (to_th)")
+    #fig.suptitle("boxen plot of misassemblies for different hyperparameters (to_th)")
     # fig.tight_layout()
     # add a big axis, hide frame
     fig.add_subplot(111, frameon=False)
     # hide tick and tick label of the big axis
     plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.rcParams.update({'font.size': 22})
     plt.xlabel('thresholds')
-    plt.ylabel('# of misassemblies')
+    plt.ylabel('# of mis-assemblies')
     # plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=6)
     # plt.rcParams["figure.autolayout"] = True
     plt.tight_layout()
@@ -511,7 +512,7 @@ def get_violin_plots_for_misassemblies_hyperparameters(out_path, quast_data, rep
     for ax in axs.flat:
         ax.label_outer()
 
-    plt.savefig(out_path + "boxen_plots_all/misassemblies_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+    plt.savefig(out_path + "misassemblies_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
 
 
 def get_violin_plots_for_contigs_hyperparameters(out_path, quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds):
@@ -534,13 +535,13 @@ def get_violin_plots_for_contigs_hyperparameters(out_path, quast_data, repeat_si
     sns.set_theme()
 
     fig, axs = plt.subplots(len(tolerances), figsize=(20, 15))
-    fig.suptitle(
-        "boxen plot of contigs for different hyperparameters (to_th)")
+    #fig.suptitle("boxen plot of contigs for different hyperparameters (to_th)")
     # fig.tight_layout()
     # add a big axis, hide frame
     fig.add_subplot(111, frameon=False)
     # hide tick and tick label of the big axis
     plt.tick_params(labelcolor='none', which='both', top=False, bottom=False, left=False, right=False)
+    plt.rcParams.update({'font.size': 22})
     plt.xlabel('thresholds')
     plt.ylabel('# of contigs')
     # plt.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, -0.25), ncol=6)
@@ -567,7 +568,7 @@ def get_violin_plots_for_contigs_hyperparameters(out_path, quast_data, repeat_si
     for ax in axs.flat:
         ax.label_outer()
 
-    plt.savefig(out_path + "boxen_plots_all/contigs_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
+    plt.savefig(out_path + "contigs_"+repeat_sizes[0]+"K-"+repeat_sizes[-1]+"K_"+copies[0]+"-"+copies[-1]+"_"+snps[0]+"-"+snps[-1]+"_"+depths[0]+"-"+depths[-1]+".png")
 
 
 
@@ -769,7 +770,7 @@ sub_plot_ylimits = {sub_plot[0]: (0, 7),
                    sub_plot[2]: (0, 110)}
 sub_plotter_method = 0
 input_path = "/Users/sakshar5068/Desktop/repeat_assembler/hyperparameters/quast/"
-figure_path = "/Users/sakshar5068/Desktop/repeat_assembler/hyperparameters/figures/"
+figure_path = "/Users/sakshar5068/Desktop/repeat_assembler/figures_paper/hyperparameters/"
 quast_data = get_quast_reports(input_path, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 
 modified_quast_data = preprocess_quast_data(quast_data)
@@ -782,5 +783,5 @@ metrics = ['# contigs', 'NG50', 'Genome fraction (%)', '# misassemblies']
 #get_box_plot_for_contigs_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #get_box_plot_for_ComAcCon_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #get_violin_plots_for_misassemblies_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
-get_violin_plots_for_contigs_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
+#get_violin_plots_for_contigs_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds)
 #subplotter_hyperparameters(figure_path, modified_quast_data, repeat_sizes, copies, snps, depths, tolerances, thresholds, sub_plotter_method)
